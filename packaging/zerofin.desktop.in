@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=ZeroFin
+Comment=Jellyfin video client
+Exec=/usr/share/APPLaunch/bin/zerofin
+Terminal=false
+Icon=share/images/zerofin.png
+Type=Application

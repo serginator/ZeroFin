@@ -18,6 +18,7 @@ namespace zerofin::app {
 //   wait:MS      pause
 //   idle:MS      wait until no network work is running (at most MS)
 //   key:NAME     up down left right enter esc tab backspace delete home end pageup pagedown
+//                playpause prev next voldown volup
 //   text:STRING  type the characters
 //   shot:NAME    save $ZEROFIN_SHOT_DIR/NAME.ppm
 //   quit         end the program

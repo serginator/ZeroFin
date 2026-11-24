@@ -19,7 +19,6 @@ struct ServerInfo {
   std::string id;
   std::string name;
   std::string version;
-  std::string local_address;
 };
 
 struct QuickConnectSession {
@@ -47,7 +46,6 @@ struct MediaStream {
   std::string profile;
   std::string language;
   std::string title;
-  std::string display_title;
   int width = 0;
   int height = 0;
   int bit_depth = 0;
@@ -58,7 +56,6 @@ struct MediaStream {
   bool is_forced = false;
   bool is_interlaced = false;
   bool is_text_subtitle = false;
-  bool is_external = false;
 };
 
 struct MediaSource {
@@ -95,7 +92,6 @@ struct Item {
   std::string series_id;
   std::string series_name;
   std::string season_id;
-  std::string season_name;
   std::string primary_image_tag;
   int index_number = -1;         // episode number, or season number for seasons
   int parent_index_number = -1;  // season number for episodes

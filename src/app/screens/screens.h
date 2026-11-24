@@ -62,13 +62,17 @@ void go_setup(AppContext& ctx);    // clears the stack and shows the server scre
 // Returns true in that case.
 bool handle_auth_error(AppContext& ctx, const jf::Error& error);
 
+// Handles an auth error as above. Any other error shows an error toast. Returns true when the
+// login ended.
+bool report_error(AppContext& ctx, const jf::Error& error, uint32_t toast_ms = 3500);
+
 std::string error_text(const jf::Error& error);
 std::string reason_text(jf::Reason reason);
 
 // The full-screen player. Needs `ctx.make_backend` to return a backend.
 std::unique_ptr<Screen> make_player_screen(AppContext& ctx, jf::PlaybackPlan plan, jf::Item item);
 
-// The default `start_playback`: shows what the player would do. Step 4 replaces it.
+// Used by `start_playback` when the build has no player: shows what the player would do.
 void show_playback_plan(AppContext& ctx, const jf::PlaybackPlan& plan, const jf::Item& item);
 
 }  // namespace zerofin::app

@@ -7,19 +7,13 @@
 #include <map>
 
 #include "jellyfin/resume.h"
+#include "jellyfin/text.h"
 
 namespace zerofin::ui {
 namespace {
 
-std::string upper(std::string s) {
-  std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::toupper(c); });
-  return s;
-}
-
-std::string lower(std::string s) {
-  std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
-  return s;
-}
+using jf::to_lower;
+using jf::to_upper;
 
 std::string channel_layout(int channels) {
   switch (channels) {
@@ -33,15 +27,15 @@ std::string channel_layout(int channels) {
 }
 
 std::string audio_codec_name(const std::string& codec) {
-  const std::string c = lower(codec);
+  const std::string c = to_lower(codec);
   if (c == "eac3") return "EAC3";
   if (c == "truehd") return "TrueHD";
   if (c == "dts") return "DTS";
-  return upper(codec);
+  return to_upper(codec);
 }
 
 std::string subtitle_codec_name(const std::string& codec) {
-  const std::string c = lower(codec);
+  const std::string c = to_lower(codec);
   if (c == "subrip" || c == "srt") return "SRT";
   if (c == "ass" || c == "ssa") return "ASS";
   if (c == "webvtt" || c == "vtt") return "VTT";
@@ -49,7 +43,7 @@ std::string subtitle_codec_name(const std::string& codec) {
   if (c == "dvdsub" || c == "dvd_subtitle") return "DVD";
   if (c == "dvbsub" || c == "dvb_subtitle") return "DVB";
   if (c == "mov_text") return "TXT";
-  return upper(codec);
+  return to_upper(codec);
 }
 
 }  // namespace
@@ -103,15 +97,15 @@ std::string language_name(const std::string& code) {
       {"swe", "Swedish"},  {"nor", "Norwegian"},  {"dan", "Danish"},   {"fin", "Finnish"},   {"ces", "Czech"},
       {"cze", "Czech"},    {"ell", "Greek"},      {"gre", "Greek"},    {"heb", "Hebrew"},    {"tha", "Thai"},
       {"vie", "Vietnamese"}, {"ukr", "Ukrainian"}, {"eus", "Basque"},  {"glg", "Galician"}};
-  const std::string c = lower(code);
+  const std::string c = to_lower(code);
   if (c.empty() || c == "und") return "Unknown";
   auto it = kNames.find(c);
-  return it != kNames.end() ? it->second : upper(code);
+  return it != kNames.end() ? it->second : to_upper(code);
 }
 
 // Name for a track: its language, else its title, else "Track N" (container stream index).
 static std::string stream_name(const jf::MediaStream& s) {
-  const std::string lang = lower(s.language);
+  const std::string lang = to_lower(s.language);
   if (!lang.empty() && lang != "und") return language_name(s.language);
   if (!s.title.empty()) return s.title;
   if (s.index >= 0) return "Track " + std::to_string(s.index);
@@ -131,7 +125,7 @@ std::string subtitle_label(const jf::MediaStream& s) {
   std::string out = stream_name(s);
   const std::string codec = subtitle_codec_name(s.codec);
   if (!codec.empty()) out += " · " + codec;
-  const std::string c = lower(s.codec);
+  const std::string c = to_lower(s.codec);
   const bool image = !s.is_text_subtitle && (c == "pgssub" || c == "pgs" || c == "hdmv_pgs_subtitle" ||
                                              c == "dvdsub" || c == "dvd_subtitle" || c == "dvbsub" ||
                                              c == "dvb_subtitle");

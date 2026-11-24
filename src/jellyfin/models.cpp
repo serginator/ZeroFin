@@ -53,7 +53,6 @@ MediaStream parse_stream(const json& j) {
   s.profile = str(j, "Profile");
   s.language = str(j, "Language");
   s.title = str(j, "Title");
-  s.display_title = str(j, "DisplayTitle");
   s.width = static_cast<int>(i64(j, "Width"));
   s.height = static_cast<int>(i64(j, "Height"));
   s.bit_depth = static_cast<int>(i64(j, "BitDepth"));
@@ -64,7 +63,6 @@ MediaStream parse_stream(const json& j) {
   s.is_forced = flag(j, "IsForced");
   s.is_interlaced = flag(j, "IsInterlaced");
   s.is_text_subtitle = flag(j, "IsTextSubtitleStream");
-  s.is_external = flag(j, "IsExternal");
   return s;
 }
 
@@ -93,7 +91,6 @@ Item parse_item(const json& j) {
   item.series_id = str(j, "SeriesId");
   item.series_name = str(j, "SeriesName");
   item.season_id = str(j, "SeasonId");
-  item.season_name = str(j, "SeasonName");
   item.index_number = static_cast<int>(i64(j, "IndexNumber", -1));
   item.parent_index_number = static_cast<int>(i64(j, "ParentIndexNumber", -1));
   item.production_year = static_cast<int>(i64(j, "ProductionYear"));
@@ -167,7 +164,7 @@ const MediaStream* MediaSource::default_audio() const {
 
 Result<ServerInfo> parse_server_info(std::string_view text) {
   return guarded<ServerInfo>(text, [](const json& j) -> Result<ServerInfo> {
-    ServerInfo s{str(j, "Id"), str(j, "ServerName"), str(j, "Version"), str(j, "LocalAddress")};
+    ServerInfo s{str(j, "Id"), str(j, "ServerName"), str(j, "Version")};
     if (s.id.empty()) return Error{ErrorKind::Parse, "server info has no Id", 0};
     return s;
   });

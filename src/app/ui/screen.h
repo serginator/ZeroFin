@@ -36,7 +36,6 @@ class Screen {
   // Returns true when the key was used. Unused Esc pops the screen.
   virtual bool on_key(const ui::KeyEvent& /*event*/) { return false; }
 
-  void set_title(const std::string& title);
   void set_status(const std::string& text, uint32_t color = color::kDim);
 
  protected:
@@ -72,18 +71,15 @@ class Navigator {
 
   void push(std::unique_ptr<Screen> screen);
   void pop();
-  void replace(std::unique_ptr<Screen> screen);  // replaces the top screen
   void reset(std::unique_ptr<Screen> screen);    // clears the stack and shows `screen`
 
   // Sends the key to the top screen. An unused Esc pops when there is a screen below.
   bool handle_key(const ui::KeyEvent& event);
   void process_pending();
 
-  size_t depth() const { return stack_.size(); }
-
  private:
   struct Op {
-    enum class Type { Push, Pop, Replace, Reset } type;
+    enum class Type { Push, Pop, Reset } type;
     std::unique_ptr<Screen> screen;
   };
   void show_top();

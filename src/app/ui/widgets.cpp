@@ -85,12 +85,6 @@ void ListView::set_rows(std::vector<ListRow> rows) {
   refresh();
 }
 
-void ListView::update_row(size_t index, ListRow row) {
-  if (index >= rows_.size()) return;
-  rows_[index] = std::move(row);
-  refresh();
-}
-
 void ListView::set_message(const std::string& text, uint32_t color) {
   message_active_ = true;
   lv_label_set_text(message_, text.c_str());
@@ -99,12 +93,6 @@ void ListView::set_message(const std::string& text, uint32_t color) {
   lv_obj_update_layout(message_);
   lv_obj_set_y(message_, std::max(4, (h - lv_obj_get_height(message_)) / 2));
   lv_obj_remove_flag(message_, LV_OBJ_FLAG_HIDDEN);
-  refresh();
-}
-
-void ListView::clear_message() {
-  message_active_ = false;
-  lv_obj_add_flag(message_, LV_OBJ_FLAG_HIDDEN);
   refresh();
 }
 
@@ -161,11 +149,7 @@ void ListView::refresh() {
     const bool selected = active_ && static_cast<int>(idx) == cursor_.selected();
 
     lv_obj_set_style_bg_opa(o.row, selected ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
-    if (selected) {
-      lv_obj_remove_flag(o.accent, LV_OBJ_FLAG_HIDDEN);
-    } else {
-      lv_obj_add_flag(o.accent, LV_OBJ_FLAG_HIDDEN);
-    }
+    lv_obj_set_flag(o.accent, LV_OBJ_FLAG_HIDDEN, !selected);
 
     const bool has_detail = !row.detail.empty() || row.watched;
     const int primary_w = width_ - 8 - (has_detail ? detail_w_ + kScrollW + 10 : kScrollW + 8);
@@ -188,22 +172,19 @@ void ListView::refresh() {
 
     if (row.progress > 0) {
       lv_obj_set_width(o.bar, std::max(2, static_cast<int>((width_ - 16 - kScrollW) * std::min(1.0, row.progress))));
-      lv_obj_remove_flag(o.bar, LV_OBJ_FLAG_HIDDEN);
-    } else {
-      lv_obj_add_flag(o.bar, LV_OBJ_FLAG_HIDDEN);
     }
+    lv_obj_set_flag(o.bar, LV_OBJ_FLAG_HIDDEN, !(row.progress > 0));
   }
 
   const int track_h = static_cast<int>(visible_) * kRowH;
-  if (!message_active_ && rows_.size() > visible_) {
-    lv_obj_remove_flag(scroll_track_, LV_OBJ_FLAG_HIDDEN);
+  const bool show_track = !message_active_ && rows_.size() > visible_;
+  lv_obj_set_flag(scroll_track_, LV_OBJ_FLAG_HIDDEN, !show_track);
+  if (show_track) {
     const int thumb_h = std::max(8, static_cast<int>(track_h * visible_ / rows_.size()));
     const int max_top = static_cast<int>(rows_.size() - visible_);
     const int thumb_y = max_top > 0 ? static_cast<int>((track_h - thumb_h) * static_cast<int>(top) / max_top) : 0;
     lv_obj_set_height(scroll_thumb_, thumb_h);
     lv_obj_set_y(scroll_thumb_, thumb_y);
-  } else {
-    lv_obj_add_flag(scroll_track_, LV_OBJ_FLAG_HIDDEN);
   }
 }
 

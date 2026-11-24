@@ -18,7 +18,6 @@ class DemoBackend : public PlayerBackend {
   void seek_relative(double seconds) override;
   void set_volume(int) override {}
   void stop() override { running_ = false; }
-  const std::string& last_error() const override { return error_; }
 
  private:
   bool running_ = false;
@@ -31,7 +30,6 @@ class DemoBackend : public PlayerBackend {
   uint32_t last_poll_ms_ = 0;
   uint32_t last_render_ms_ = 0;
   uint32_t frame_ = 0;
-  std::string error_;
 };
 
 }  // namespace zerofin::player

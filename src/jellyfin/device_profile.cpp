@@ -41,7 +41,7 @@ Result<PlaybackProfile> playback_profile_from_json(std::string_view text) {
   }
 }
 
-std::string build_device_profile_json(const PlaybackProfile& p, PlayMode mode) {
+json build_device_profile(const PlaybackProfile& p, PlayMode mode) {
   json profile;
   profile["Name"] = "ZeroFin";
   profile["MaxStreamingBitrate"] = p.transcode_video_bitrate + p.transcode_audio_bitrate;
@@ -84,7 +84,11 @@ std::string build_device_profile_json(const PlaybackProfile& p, PlayMode mode) {
   }
   profile["SubtitleProfiles"] = subs;
 
-  return profile.dump();
+  return profile;
+}
+
+std::string build_device_profile_json(const PlaybackProfile& profile, PlayMode mode) {
+  return build_device_profile(profile, mode).dump();
 }
 
 }  // namespace zerofin::jf

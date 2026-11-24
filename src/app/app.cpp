@@ -29,10 +29,6 @@
 #include "jellyfin/curl_http.h"
 #endif
 
-#ifndef ZEROFIN_VERSION_STRING
-#define ZEROFIN_VERSION_STRING "dev"
-#endif
-
 namespace zerofin::app {
 namespace {
 
@@ -54,7 +50,7 @@ std::unique_ptr<jf::HttpClient> make_transport(bool& demo) {
   const std::string t = choice ? choice : "";
   if (t == "cli") return std::make_unique<jf::CurlCliHttpClient>();
 #if ZEROFIN_HAS_LIBCURL
-  if (t != "cli" && !(t.empty() && ZEROFIN_PREFER_CLI_CURL)) return std::make_unique<jf::CurlHttpClient>();
+  if (!(t.empty() && ZEROFIN_PREFER_CLI_CURL)) return std::make_unique<jf::CurlHttpClient>();
 #endif
   return std::make_unique<jf::CurlCliHttpClient>();
 }

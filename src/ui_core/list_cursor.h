@@ -15,8 +15,6 @@ class ListCursor {
   // `selectable[i]` tells whether row i can be selected. Keeps the selection when possible.
   void set_rows(std::vector<bool> selectable);
 
-  size_t row_count() const { return selectable_.size(); }
-  size_t visible() const { return visible_; }
   // Index of the selected row, or -1 when nothing is selectable.
   int selected() const { return selected_; }
   // Index of the first visible row.

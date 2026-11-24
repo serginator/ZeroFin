@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include <nlohmann/json_fwd.hpp>
+
 #include "jellyfin/result.h"
 
 namespace zerofin::jf {
@@ -32,6 +34,8 @@ Result<PlaybackProfile> playback_profile_from_json(std::string_view json);
 
 // Builds the "DeviceProfile" object sent in the PlaybackInfo request body.
 // AlwaysTranscode leaves the direct play list empty.
+nlohmann::json build_device_profile(const PlaybackProfile& profile, PlayMode mode);
+// The same object as a JSON string.
 std::string build_device_profile_json(const PlaybackProfile& profile, PlayMode mode);
 
 }  // namespace zerofin::jf

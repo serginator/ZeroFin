@@ -47,8 +47,6 @@ class PlayerBackend {
   virtual void set_volume(int percent) = 0;
   // Frees the decoder memory (CMA on the device).
   virtual void stop() = 0;
-  // Redacted text of the last error.
-  virtual const std::string& last_error() const = 0;
 };
 
 // The demo backend when `demo` is true, else the libmpv backend, else nullptr (a build without libmpv).

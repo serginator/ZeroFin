@@ -9,20 +9,15 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <filesystem>
 #include <string>
 #include <vector>
 
 #include "platform/platform.h"
+#include "platform/platform_common.h"
+#include "ui/theme.h"
 
 namespace zerofin::platform {
-
-uint32_t tick_ms() {
-  timespec ts{};
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return static_cast<uint32_t>(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-}
 
 namespace {
 
@@ -58,25 +53,22 @@ class FbPlatform : public Platform {
   bool save_snapshot(const std::string& path) override {
     const int fd = open(fb_path_.c_str(), O_RDONLY | O_CLOEXEC);
     if (fd < 0) return false;
-    constexpr int kW = 320;
-    constexpr int kH = 170;
+    constexpr int kW = app::kScreenW;
+    constexpr int kH = app::kScreenH;
     std::vector<uint16_t> px(static_cast<size_t>(kW) * kH);
     const ssize_t want = static_cast<ssize_t>(px.size() * sizeof(uint16_t));
     const ssize_t got = pread(fd, px.data(), static_cast<size_t>(want), 0);
     close(fd);
     if (got != want) return false;
-    std::FILE* f = std::fopen(path.c_str(), "wb");
-    if (!f) return false;
-    std::fprintf(f, "P6\n%d %d\n255\n", kW, kH);
+    std::vector<uint8_t> rgb;
+    rgb.reserve(px.size() * 3);
     for (uint16_t p : px) {
-      const unsigned r = (p >> 11) & 0x1F, g = (p >> 5) & 0x3F, b = p & 0x1F;
-      const unsigned char rgb[3] = {static_cast<unsigned char>((r << 3) | (r >> 2)),
-                                    static_cast<unsigned char>((g << 2) | (g >> 4)),
-                                    static_cast<unsigned char>((b << 3) | (b >> 2))};
-      std::fwrite(rgb, 1, 3, f);
+      const Rgb888 c = rgb565_to_rgb888(p);
+      rgb.push_back(c.r);
+      rgb.push_back(c.g);
+      rgb.push_back(c.b);
     }
-    std::fclose(f);
-    return true;
+    return write_ppm(path, kW, kH, rgb.data());
   }
 
   bool poll(std::vector<ui::KeyEvent>& out) override {

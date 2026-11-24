@@ -3,18 +3,13 @@
 #include <algorithm>
 #include <cctype>
 
+#include "jellyfin/text.h"
+
 namespace zerofin::jf {
 namespace {
 
 bool is_unreserved(unsigned char c) {
   return std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~';
-}
-
-bool iequals(std::string_view a, std::string_view b) {
-  return a.size() == b.size() &&
-         std::equal(a.begin(), a.end(), b.begin(), [](char x, char y) {
-           return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y));
-         });
 }
 
 std::string percent_decode(std::string_view text) {
@@ -203,8 +198,7 @@ std::optional<std::string> normalize_server_url(std::string_view input) {
   if (scheme_end == std::string::npos) {
     url = "http://" + url;
   } else {
-    std::string scheme = url.substr(0, scheme_end);
-    std::transform(scheme.begin(), scheme.end(), scheme.begin(), [](unsigned char c) { return std::tolower(c); });
+    const std::string scheme = to_lower(url.substr(0, scheme_end));
     if (scheme != "http" && scheme != "https") return std::nullopt;
     url = scheme + url.substr(scheme_end);
   }

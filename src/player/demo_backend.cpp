@@ -29,7 +29,6 @@ bool DemoBackend::start(const StartParams& params) {
     if (seconds > 0) duration_ = seconds;
   }
   position_ = std::clamp(params.start_seconds, 0.0, duration_);
-  error_.clear();
   return true;
 }
 

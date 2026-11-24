@@ -13,8 +13,9 @@ set(ZEROFIN_APP_SOURCES
   ui/fonts.cpp
   ui/player_overlay.cpp
   ui/screen.cpp
-  ui/widgets.cpp)
-list(APPEND ZEROFIN_APP_SOURCES platform/status_reader.cpp)
+  ui/widgets.cpp
+  platform/platform_common.cpp
+  platform/status_reader.cpp)
 if(USE_DESKTOP)
   list(APPEND ZEROFIN_APP_SOURCES platform/platform_sdl.cpp)
 else()
@@ -30,12 +31,7 @@ target_compile_definitions(zerofin_app PUBLIC
 target_compile_options(zerofin_app PRIVATE -Wall -Wextra)
 
 # On macOS the simulator talks to the LAN through /usr/bin/curl (see make_transport in app.cpp).
-if(APPLE)
-  set(_zerofin_prefer_cli 1)
-else()
-  set(_zerofin_prefer_cli 0)
-endif()
-target_compile_definitions(zerofin_app PRIVATE ZEROFIN_PREFER_CLI_CURL=${_zerofin_prefer_cli})
+target_compile_definitions(zerofin_app PRIVATE ZEROFIN_PREFER_CLI_CURL=$<BOOL:${APPLE}>)
 if(ZEROFIN_WITH_CURL)
   target_link_libraries(zerofin_app PUBLIC zerofin_http_curl)
   target_compile_definitions(zerofin_app PRIVATE ZEROFIN_HAS_LIBCURL=1)

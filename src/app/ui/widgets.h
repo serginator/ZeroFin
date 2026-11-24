@@ -30,17 +30,13 @@ class ListView {
   ListView(lv_obj_t* parent, const Fonts& fonts, int x, int y, int width, size_t visible_rows);
 
   void set_rows(std::vector<ListRow> rows);
-  void update_row(size_t index, ListRow row);
   // Replaces the rows with a centered message such as "Loading...".
   void set_message(const std::string& text, uint32_t color = color::kDim);
-  void clear_message();
 
   // Up, Down, PageUp, PageDown, Home, End. Returns true when the key was a list key.
   bool handle_key(const ui::KeyEvent& event);
 
   int selected() const { return cursor_.selected(); }
-  size_t size() const { return rows_.size(); }
-  const ListRow& row(size_t index) const { return rows_[index]; }
   bool select(size_t index);
   bool near_end(size_t margin) const;
   void set_active(bool active);  // an inactive list draws no selection

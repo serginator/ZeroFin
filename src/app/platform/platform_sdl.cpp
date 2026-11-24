@@ -4,23 +4,18 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <vector>
 
 #include "platform/platform.h"
+#include "platform/platform_common.h"
+#include "ui/theme.h"
 
 namespace zerofin::platform {
 
-uint32_t tick_ms() {
-  timespec ts{};
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return static_cast<uint32_t>(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-}
-
 namespace {
 
-constexpr int kW = 320;
-constexpr int kH = 170;
+constexpr int kW = app::kScreenW;
+constexpr int kH = app::kScreenH;
 constexpr int kZoom = 3;
 
 class SdlPlatform : public Platform {
@@ -84,16 +79,14 @@ class SdlPlatform : public Platform {
   }
 
   bool save_snapshot(const std::string& path) override {
-    std::FILE* f = std::fopen(path.c_str(), "wb");
-    if (!f) return false;
-    std::fprintf(f, "P6\n%d %d\n255\n", kW, kH);
+    std::vector<uint8_t> rgb;
+    rgb.reserve(pixels_.size() * 3);
     for (uint32_t px : pixels_) {
-      const unsigned char rgb[3] = {static_cast<unsigned char>(px >> 16), static_cast<unsigned char>(px >> 8),
-                                    static_cast<unsigned char>(px)};
-      std::fwrite(rgb, 1, 3, f);
+      rgb.push_back(static_cast<uint8_t>(px >> 16));
+      rgb.push_back(static_cast<uint8_t>(px >> 8));
+      rgb.push_back(static_cast<uint8_t>(px));
     }
-    std::fclose(f);
-    return true;
+    return write_ppm(path, kW, kH, rgb.data());
   }
 
  private:
@@ -132,10 +125,8 @@ class SdlPlatform : public Platform {
       uint32_t* dst = &self->pixels_[static_cast<size_t>(area->y1 + y) * kW + static_cast<size_t>(area->x1)];
       for (int x = 0; x < w; ++x) {
         const uint16_t p = src[y * w + x];
-        const uint32_t r = (p >> 11) & 0x1F;
-        const uint32_t g = (p >> 5) & 0x3F;
-        const uint32_t b = p & 0x1F;
-        dst[x] = 0xFF000000u | (((r << 3) | (r >> 2)) << 16) | (((g << 2) | (g >> 4)) << 8) | ((b << 3) | (b >> 2));
+        const Rgb888 c = rgb565_to_rgb888(p);
+        dst[x] = 0xFF000000u | (static_cast<uint32_t>(c.r) << 16) | (static_cast<uint32_t>(c.g) << 8) | c.b;
       }
     }
     if (lv_display_flush_is_last(disp) && self->texture_) {

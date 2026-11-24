@@ -1,8 +1,8 @@
 #include "jellyfin/client.h"
 
-#include <cctype>
 #include <nlohmann/json.hpp>
 
+#include "jellyfin/text.h"
 #include "jellyfin/url.h"
 
 namespace zerofin::jf {
@@ -25,11 +25,6 @@ Result<Unit> to_unit(const Result<std::string>& reply) {
 
 const char* play_method_name(Method m) { return m == Method::DirectPlay ? "DirectPlay" : "Transcode"; }
 
-std::string lower_ascii(std::string s) {
-  for (auto& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-  return s;
-}
-
 }  // namespace
 
 Client::Client(HttpClient& http, ClientInfo info, std::string base_url)
@@ -50,12 +45,12 @@ Result<std::string> Client::request(const std::string& method, const std::string
     req.headers.push_back({"Content-Type", "application/json"});
     req.body = body;
   }
-  const HttpResponse res = http_.send(req);
+  HttpResponse res = http_.send(req);
   if (res.status == 0) return Error{ErrorKind::Network, res.error.empty() ? "no response" : res.error, 0};
   if (res.status == 401) return Error{ErrorKind::Unauthorized, "the server rejected the login", 401};
   if (res.status == 404) return Error{ErrorKind::NotFound, "not found", 404};
   if (res.status >= 400) return Error{ErrorKind::Http, "HTTP " + std::to_string(res.status), res.status};
-  return res.body;
+  return std::move(res.body);
 }
 
 // ---- server and login ----
@@ -73,20 +68,18 @@ Result<bool> Client::quick_connect_authorized(const std::string& secret) {
                            parse_quick_connect_authenticated);
 }
 
-Result<AuthResult> Client::login_quick_connect(const std::string& secret) {
-  auto result = parse_reply<AuthResult>(
-      request("POST", "/Users/AuthenticateWithQuickConnect", {}, json{{"Secret", secret}}.dump()),
-      parse_auth_result);
+Result<AuthResult> Client::login(const std::string& path, const std::string& body) {
+  auto result = parse_reply<AuthResult>(request("POST", path, {}, body), parse_auth_result);
   if (result) session_ = Session{result.value().access_token, result.value().user.id};
   return result;
 }
 
+Result<AuthResult> Client::login_quick_connect(const std::string& secret) {
+  return login("/Users/AuthenticateWithQuickConnect", json{{"Secret", secret}}.dump());
+}
+
 Result<AuthResult> Client::login_password(const std::string& user, const std::string& password) {
-  auto result = parse_reply<AuthResult>(
-      request("POST", "/Users/AuthenticateByName", {}, json{{"Username", user}, {"Pw", password}}.dump()),
-      parse_auth_result);
-  if (result) session_ = Session{result.value().access_token, result.value().user.id};
-  return result;
+  return login("/Users/AuthenticateByName", json{{"Username", user}, {"Pw", password}}.dump());
 }
 
 Result<Unit> Client::logout() {
@@ -98,37 +91,32 @@ Result<Unit> Client::logout() {
 
 // ---- browse ----
 
-Result<ItemList> Client::views() {
+Result<ItemList> Client::list_request(const std::string& path, const QueryParams& query) {
   if (!session_.logged_in()) return not_logged_in();
-  return parse_reply<ItemList>(request("GET", "/UserViews", {{"userId", session_.user_id}}), parse_item_list);
+  return parse_reply<ItemList>(request("GET", path, query), parse_item_list);
 }
 
+Result<ItemList> Client::views() { return list_request("/UserViews", {{"userId", session_.user_id}}); }
+
 Result<ItemList> Client::resume_items(int limit) {
-  if (!session_.logged_in()) return not_logged_in();
-  return parse_reply<ItemList>(request("GET", "/UserItems/Resume",
-                                       {{"userId", session_.user_id},
-                                        {"limit", std::to_string(limit)},
-                                        {"mediaTypes", "Video"},
-                                        {"fields", "Overview"},
-                                        {"enableTotalRecordCount", "false"}}),
-                               parse_item_list);
+  return list_request("/UserItems/Resume", {{"userId", session_.user_id},
+                                            {"limit", std::to_string(limit)},
+                                            {"mediaTypes", "Video"},
+                                            {"fields", "Overview"},
+                                            {"enableTotalRecordCount", "false"}});
 }
 
 Result<ItemList> Client::next_up(int limit) {
-  if (!session_.logged_in()) return not_logged_in();
-  return parse_reply<ItemList>(request("GET", "/Shows/NextUp",
-                                       {{"userId", session_.user_id},
+  return list_request("/Shows/NextUp", {{"userId", session_.user_id},
                                         {"limit", std::to_string(limit)},
                                         {"fields", "Overview"},
-                                        {"enableTotalRecordCount", "false"}}),
-                               parse_item_list);
+                                        {"enableTotalRecordCount", "false"}});
 }
 
 Result<ItemList> Client::items(const ItemQuery& q) {
-  if (!session_.logged_in()) return not_logged_in();
   QueryParams params = {{"userId", session_.user_id},
-                        {"sortBy", q.sort_by},
-                        {"sortOrder", q.sort_order},
+                        {"sortBy", "SortName"},
+                        {"sortOrder", "Ascending"},
                         {"startIndex", std::to_string(q.start_index)},
                         {"limit", std::to_string(q.limit)},
                         {"fields", "Overview"}};
@@ -137,45 +125,32 @@ Result<ItemList> Client::items(const ItemQuery& q) {
     params.push_back({"includeItemTypes", q.include_types});
     params.push_back({"recursive", "true"});
   }
-  return parse_reply<ItemList>(request("GET", "/Items", params), parse_item_list);
+  return list_request("/Items", params);
 }
 
 Result<ItemList> Client::seasons(const std::string& series_id) {
-  if (!session_.logged_in()) return not_logged_in();
-  return parse_reply<ItemList>(
-      request("GET", "/Shows/" + percent_encode(series_id) + "/Seasons", {{"userId", session_.user_id}}),
-      parse_item_list);
+  return list_request("/Shows/" + percent_encode(series_id) + "/Seasons", {{"userId", session_.user_id}});
 }
 
 Result<ItemList> Client::episodes(const std::string& series_id, const std::string& season_id) {
-  if (!session_.logged_in()) return not_logged_in();
-  return parse_reply<ItemList>(request("GET", "/Shows/" + percent_encode(series_id) + "/Episodes",
-                                       {{"userId", session_.user_id}, {"seasonId", season_id}, {"fields", "Overview"}}),
-                               parse_item_list);
+  return list_request("/Shows/" + percent_encode(series_id) + "/Episodes",
+                      {{"userId", session_.user_id}, {"seasonId", season_id}, {"fields", "Overview"}});
 }
 
 Result<ItemList> Client::search(const std::string& term, int limit) {
-  if (!session_.logged_in()) return not_logged_in();
-  return parse_reply<ItemList>(request("GET", "/Items",
-                                       {{"userId", session_.user_id},
-                                        {"searchTerm", term},
-                                        {"includeItemTypes", "Movie,Series"},
-                                        {"recursive", "true"},
-                                        {"limit", std::to_string(limit)},
-                                        {"fields", "Overview"}}),
-                               parse_item_list);
+  return list_request("/Items", {{"userId", session_.user_id},
+                                 {"searchTerm", term},
+                                 {"includeItemTypes", "Movie,Series"},
+                                 {"recursive", "true"},
+                                 {"limit", std::to_string(limit)},
+                                 {"fields", "Overview"}});
 }
 
 Result<Item> Client::item(const std::string& id) {
-  if (!session_.logged_in()) return not_logged_in();
-  auto list = parse_reply<ItemList>(request("GET", "/Items",
-                                            {{"userId", session_.user_id},
-                                             {"ids", id},
-                                             {"fields", "MediaSources,Overview"}}),
-                                    parse_item_list);
+  auto list = list_request("/Items", {{"userId", session_.user_id}, {"ids", id}, {"fields", "MediaSources,Overview"}});
   if (!list) return list.error();
   if (list.value().items.empty()) return Error{ErrorKind::NotFound, "item not found", 404};
-  return list.value().items.front();
+  return std::move(list.value().items.front());
 }
 
 // ---- playback ----
@@ -209,7 +184,7 @@ Result<PlaybackPlan> Client::prepare_playback(const PlayRequest& req) {
                                               : profile_.transcode_video_bitrate + profile_.transcode_audio_bitrate)}};
   if (audio_index >= 0) query.push_back({"audioStreamIndex", std::to_string(audio_index)});
 
-  const json body = {{"DeviceProfile", json::parse(build_device_profile_json(profile_, profile_mode))}};
+  const json body = {{"DeviceProfile", build_device_profile(profile_, profile_mode)}};
   auto info = parse_reply<PlaybackInfo>(
       request("POST", "/Items/" + percent_encode(req.item_id) + "/PlaybackInfo", query, body.dump()),
       parse_playback_info);
@@ -257,7 +232,7 @@ Result<PlaybackPlan> Client::prepare_playback(const PlayRequest& req) {
 
   if (req.subtitle_index && !decision.burn_in_subtitle) {
     const MediaStream* sub = source.stream_by_index(subtitle_index);
-    const std::string codec = sub ? lower_ascii(sub->codec) : "";
+    const std::string codec = sub ? to_lower(sub->codec) : "";
     const std::string format = (codec == "ass" || codec == "ssa") ? "ass" : "srt";
     plan.external_subtitle_url = subtitle_url(req.item_id, plan.media_source_id, subtitle_index, format);
   }

@@ -24,8 +24,7 @@ constexpr const char* kScaleFilter =
 MpvBackend::~MpvBackend() { stop(); }
 
 void MpvBackend::fail(const std::string& what) {
-  error_ = jf::redact_text(what);
-  std::fprintf(stderr, "player: %s\n", error_.c_str());
+  std::fprintf(stderr, "player: %s\n", jf::redact_text(what).c_str());
 }
 
 bool MpvBackend::create_handle() {
@@ -73,7 +72,6 @@ bool MpvBackend::create_handle() {
 }
 
 bool MpvBackend::start(const StartParams& params) {
-  error_.clear();
   if (!mpv_ && !create_handle()) return false;
 
   state_ = PlayerState{};
@@ -81,7 +79,7 @@ bool MpvBackend::start(const StartParams& params) {
   subtitle_url_ = params.subtitle_url;
 
   mpv_set_property_string(mpv_, "hwdec", params.hardware_decode ? "v4l2m2m-copy" : "no");
-  mpv_set_property_string(mpv_, "volume", std::to_string(std::clamp(params.volume, 0, 100)).c_str());
+  set_volume(params.volume);
   mpv_set_property_string(mpv_, "pause", "no");
 
   // Per-file options: the start time and, for direct play, the chosen tracks.

@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "jellyfin/models.h"
+#include "jellyfin/text.h"
 #include "jellyfin/url.h"
 
 namespace zerofin::jf {
@@ -21,7 +22,7 @@ struct DemoItem {
   int year = 0;
   int runtime_min = 0;
   std::string overview;
-  std::string series_id, series_name, season_id, season_name;
+  std::string series_id, series_name, season_id;
   int index = -1;
   int parent_index = -1;
   bool played = false;
@@ -80,8 +81,6 @@ struct DemoData {
       series.variant = s % 4;
       series.series_name = name;
       series.series_id = series.id;
-      series.id = series.id;
-      series.variant = s % 4;
       this->series.push_back(series);
       for (int season = 1; season <= 3; ++season) {
         DemoItem se;
@@ -100,7 +99,6 @@ struct DemoData {
           e.series_id = series.id;
           e.series_name = name;
           e.season_id = se.id;
-          e.season_name = se.name;
           e.index = ep;
           e.parent_index = season;
           e.runtime_min = 24 + (ep * 3) % 20;
@@ -174,7 +172,6 @@ json item_json(const DemoItem& it, bool with_sources) {
   }
   if (!it.season_id.empty()) {
     j["SeasonId"] = it.season_id;
-    j["SeasonName"] = it.season_name;
   }
   if (it.index >= 0) j["IndexNumber"] = it.index;
   if (it.parent_index >= 0) j["ParentIndexNumber"] = it.parent_index;
@@ -205,11 +202,6 @@ std::string page_json(const std::vector<const DemoItem*>& all, const std::string
   std::vector<json> page;
   for (int i = start; i < static_cast<int>(all.size()) && i < start + limit; ++i) page.push_back(item_json(*all[static_cast<size_t>(i)], false));
   return list_json(page, static_cast<int>(all.size()), start);
-}
-
-std::string lower(std::string s) {
-  std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
-  return s;
 }
 
 const DemoItem* find_any(const std::string& id) {
@@ -296,12 +288,12 @@ HttpResponse DemoHttpClient::send(const HttpRequest& req) {
     }
     if (auto term = get_query_param(req.url, "searchTerm")) {
       std::vector<const DemoItem*> hits;
-      const std::string t = lower(*term);
+      const std::string t = to_lower(*term);
       for (const auto& m : d.movies) {
-        if (lower(m.name).find(t) != std::string::npos) hits.push_back(&m);
+        if (to_lower(m.name).find(t) != std::string::npos) hits.push_back(&m);
       }
       for (const auto& s : d.series) {
-        if (lower(s.name).find(t) != std::string::npos) hits.push_back(&s);
+        if (to_lower(s.name).find(t) != std::string::npos) hits.push_back(&s);
       }
       return ok(page_json(hits, req.url));
     }

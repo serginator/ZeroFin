@@ -24,7 +24,6 @@ class MpvBackend : public PlayerBackend {
   void seek_relative(double seconds) override;
   void set_volume(int percent) override;
   void stop() override;
-  const std::string& last_error() const override { return error_; }
 
  private:
   bool create_handle();
@@ -38,7 +37,6 @@ class MpvBackend : public PlayerBackend {
   PlayerState state_;
   uint32_t last_props_ms_ = 0;
   bool props_read_ = false;
-  std::string error_;
 };
 
 }  // namespace zerofin::player

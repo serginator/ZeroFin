@@ -32,11 +32,6 @@ void Screen::attach(lv_obj_t* parent) {
   build();
 }
 
-void Screen::set_title(const std::string& title) {
-  title_text_ = title;
-  if (title_) lv_label_set_text(title_, title.c_str());
-}
-
 void Screen::set_status(const std::string& text, uint32_t color) {
   if (!status_) return;
   lv_label_set_text(status_, text.c_str());
@@ -71,9 +66,6 @@ void Navigator::push(std::unique_ptr<Screen> screen) {
   pending_.push_back({Op::Type::Push, std::move(screen)});
 }
 void Navigator::pop() { pending_.push_back({Op::Type::Pop, nullptr}); }
-void Navigator::replace(std::unique_ptr<Screen> screen) {
-  pending_.push_back({Op::Type::Replace, std::move(screen)});
-}
 void Navigator::reset(std::unique_ptr<Screen> screen) {
   pending_.push_back({Op::Type::Reset, std::move(screen)});
 }
@@ -114,12 +106,6 @@ void Navigator::process_pending() {
             stack_.pop_back();
             show_top();
           }
-          break;
-        case Op::Type::Replace:
-          if (!stack_.empty()) stack_.pop_back();
-          op.screen->attach(parent_);
-          stack_.push_back(std::move(op.screen));
-          show_top();
           break;
         case Op::Type::Reset:
           stack_.clear();

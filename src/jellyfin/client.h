@@ -23,8 +23,6 @@ struct Session {
 struct ItemQuery {
   std::string parent_id;
   std::string include_types;  // e.g. "Movie,Series"
-  std::string sort_by = "SortName";
-  std::string sort_order = "Ascending";
   int start_index = 0;
   int limit = 50;
 };
@@ -70,8 +68,6 @@ class Client {
   void set_session(Session session) { session_ = std::move(session); }
   const Session& session() const { return session_; }
   void set_profile(PlaybackProfile profile) { profile_ = profile; }
-  const PlaybackProfile& profile() const { return profile_; }
-  const std::string& base_url() const { return base_url_; }
 
   // Server and login.
   Result<ServerInfo> public_info();
@@ -105,6 +101,8 @@ class Client {
  private:
   Result<std::string> request(const std::string& method, const std::string& path, const QueryParams& query = {},
                               const std::string& body = {});
+  Result<AuthResult> login(const std::string& path, const std::string& body);  // also sets the session
+  Result<ItemList> list_request(const std::string& path, const QueryParams& query);
   Result<Unit> report(const char* path, const ProgressReport& report, bool with_pause);
   std::string url_for(const std::string& path, const QueryParams& query = {}) const;
 

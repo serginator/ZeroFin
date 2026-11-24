@@ -89,6 +89,12 @@ bool handle_auth_error(AppContext& ctx, const jf::Error& error) {
   return true;
 }
 
+bool report_error(AppContext& ctx, const jf::Error& error, uint32_t toast_ms) {
+  if (handle_auth_error(ctx, error)) return true;
+  ctx.toast->show(error_text(error), Toast::Kind::Error, toast_ms);
+  return false;
+}
+
 std::string error_text(const jf::Error& e) {
   switch (e.kind) {
     case jf::ErrorKind::Network: return "Cannot reach the server";

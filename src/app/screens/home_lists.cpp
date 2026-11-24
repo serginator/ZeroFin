@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <optional>
 
 #include "screens/screens.h"
 #include "ui/widgets.h"
@@ -68,15 +69,15 @@ class HomeScreen : public Screen {
     first_error_.reset();
     auto client = ctx_.client;
     async([client] { return client->resume_items(10); }, [this](jf::Result<jf::ItemList> r) {
-      if (r) resume_ = std::move(r.value().items); else note_error(r.error());
+      if (r) staged_resume_ = std::move(r.value().items); else note_error(r.error());
       done_one();
     });
     async([client] { return client->next_up(10); }, [this](jf::Result<jf::ItemList> r) {
-      if (r) next_ = std::move(r.value().items); else note_error(r.error());
+      if (r) staged_next_ = std::move(r.value().items); else note_error(r.error());
       done_one();
     });
     async([client] { return client->views(); }, [this](jf::Result<jf::ItemList> r) {
-      if (r) views_ = std::move(r.value().items); else note_error(r.error());
+      if (r) staged_views_ = std::move(r.value().items); else note_error(r.error());
       done_one();
     });
   }
@@ -88,6 +89,15 @@ class HomeScreen : public Screen {
   void done_one() {
     if (--pending_ > 0) return;
     if (first_error_ && handle_auth_error(ctx_, *first_error_)) return;
+    // The row actions index into these lists, so they change only together with the rows.
+    auto take = [](std::optional<std::vector<jf::Item>>& staged, std::vector<jf::Item>& into) {
+      if (!staged) return;
+      into = std::move(*staged);
+      staged.reset();
+    };
+    take(staged_resume_, resume_);
+    take(staged_next_, next_);
+    take(staged_views_, views_);
     failed_ = first_error_.has_value() && views_.empty();
     rebuild();
   }
@@ -108,9 +118,9 @@ class HomeScreen : public Screen {
       actions_.emplace_back();
     };
     auto add_items = [&](const std::vector<jf::Item>& items) {
-      for (const auto& it : items) {
-        rows.push_back(to_row(ui::describe_item(it, ui::RowContext::Continue)));
-        actions_.push_back([this, it] { open_item(ctx_, it); });
+      for (size_t i = 0; i < items.size(); ++i) {
+        rows.push_back(to_row(ui::describe_item(items[i], ui::RowContext::Continue)));
+        actions_.push_back([this, list = &items, i] { open_item(ctx_, (*list)[i]); });
       }
     };
 
@@ -123,12 +133,12 @@ class HomeScreen : public Screen {
       add_items(next_);
     }
     header("Libraries");
-    for (const auto& v : views_) {
-      if (!library_supported(v)) continue;
+    for (size_t i = 0; i < views_.size(); ++i) {
+      if (!library_supported(views_[i])) continue;
       ListRow r;
-      r.primary = v.name;
+      r.primary = views_[i].name;
       rows.push_back(std::move(r));
-      actions_.push_back([this, v] { open_item(ctx_, v); });
+      actions_.push_back([this, i] { open_item(ctx_, views_[i]); });
     }
     header("More");
     {
@@ -151,6 +161,10 @@ class HomeScreen : public Screen {
   std::vector<jf::Item> resume_;
   std::vector<jf::Item> next_;
   std::vector<jf::Item> views_;
+  // Fresh results of a load. They replace the lists above when all three requests are done.
+  std::optional<std::vector<jf::Item>> staged_resume_;
+  std::optional<std::vector<jf::Item>> staged_next_;
+  std::optional<std::vector<jf::Item>> staged_views_;
   std::vector<std::function<void()>> actions_;
   std::optional<jf::Error> first_error_;
   int pending_ = 0;
@@ -197,7 +211,7 @@ class ItemListScreen : public Screen {
   bool all_loaded() const { return !spec_.paged || static_cast<int>(items_.size()) >= total_; }
 
   void load_more() {
-    if (loading_ || (started_ && !items_.empty() && all_loaded())) return;
+    if (loading_ || (!items_.empty() && all_loaded())) return;
     loading_ = true;
     failed_ = false;
     const int start = static_cast<int>(items_.size());

@@ -98,22 +98,20 @@ class PlayerScreen : public Screen {
     const ui::PlayerAction action = controls_.on_key(e, now);
     switch (action) {
       case ui::PlayerAction::TogglePause:
-        if (backend_) {
-          backend_->set_paused(!state_.paused);
-          state_.paused = !state_.paused;
-        }
+        backend_->set_paused(!state_.paused);
+        state_.paused = !state_.paused;
         break;
       case ui::PlayerAction::SeekBack:
-        if (backend_) backend_->seek_relative(-ui::kSeekSeconds);
+        backend_->seek_relative(-ui::kSeekSeconds);
         overlay_->show_notice("-" + std::to_string(ui::kSeekSeconds) + " s");
         break;
       case ui::PlayerAction::SeekForward:
-        if (backend_) backend_->seek_relative(ui::kSeekSeconds);
+        backend_->seek_relative(ui::kSeekSeconds);
         overlay_->show_notice("+" + std::to_string(ui::kSeekSeconds) + " s");
         break;
       case ui::PlayerAction::ToggleMute:
         muted_ = !muted_;
-        if (backend_) backend_->set_volume(muted_ ? 0 : ctx_.volume);
+        backend_->set_volume(muted_ ? 0 : ctx_.volume);
         if (muted_) {
           overlay_->show_notice("Muted");
         } else {
@@ -125,7 +123,7 @@ class PlayerScreen : public Screen {
         const int step = action == ui::PlayerAction::VolumeUp ? kVolumeStep : -kVolumeStep;
         ctx_.volume = std::clamp(ctx_.volume + step, 0, 100);
         muted_ = false;  // changing the volume ends the mute
-        if (backend_) backend_->set_volume(ctx_.volume);
+        backend_->set_volume(ctx_.volume);
         overlay_->show_volume(ctx_.volume);
         break;
       }
@@ -237,18 +235,20 @@ class PlayerScreen : public Screen {
   }
 
   // Plays the same item again with other tracks, or as a transcode, from the current position.
-  void reload(std::optional<int> audio, std::optional<int> subtitle, jf::PlayMode mode) {
+  // `banner` is the text shown while the new stream loads.
+  void reload(std::optional<int> audio, std::optional<int> subtitle, jf::PlayMode mode, const std::string& banner) {
     if (switching_ || left_ || item_.media_sources.empty()) return;
     const double position =
         ui::restart_position(state_.started, state_.position_s, jf::ticks_to_seconds(plan_.start_ticks));
-    begin_switch(loading_text_);
+    begin_switch(banner);
     auto client = ctx_.client;
-    const jf::Item item = item_;
+    const std::string id = item_.id;
+    const jf::MediaSource source = item_.media_sources[0];
     async(
-        [client, item, audio, subtitle, mode, position] {
+        [client, id, source, audio, subtitle, mode, position] {
           jf::PlayRequest req;
-          req.item_id = item.id;
-          req.source = &item.media_sources[0];
+          req.item_id = id;
+          req.source = &source;
           req.mode = mode;
           req.audio_index = audio;
           req.subtitle_index = subtitle;
@@ -276,7 +276,7 @@ class PlayerScreen : public Screen {
   }
 
   void fail_switch(const jf::Error& error) {
-    if (!handle_auth_error(ctx_, error)) ctx_.toast->show(error_text(error), Toast::Kind::Error, 3500);
+    report_error(ctx_, error);
     leave();
   }
 
@@ -313,9 +313,8 @@ class PlayerScreen : public Screen {
   void on_playback_error() {
     if (plan_.method == jf::Method::DirectPlay && !retried_) {
       retried_ = true;
-      loading_text_ = "Trying a transcode...";
-      reload(index_or_none(plan_.audio_index), index_or_none(plan_.subtitle_index), jf::PlayMode::AlwaysTranscode);
-      loading_text_ = "Loading...";
+      reload(index_or_none(plan_.audio_index), index_or_none(plan_.subtitle_index), jf::PlayMode::AlwaysTranscode,
+             "Trying a transcode...");
       return;
     }
     ctx_.toast->show("Playback failed", Toast::Kind::Error, 3500);
@@ -335,6 +334,7 @@ class PlayerScreen : public Screen {
     backend_->stop();  // free the decoder. The last frame stays on the canvas.
     overlay_->set_controls_visible(false);
     countdown_.start(platform::tick_ms());
+    countdown_shown_ = -1;
   }
 
   void tick_countdown(uint32_t now) {
@@ -344,8 +344,10 @@ class PlayerScreen : public Screen {
       switch_to(id);
       return;
     }
-    overlay_->set_banner("Next: " + next_label_ + " plays in " + std::to_string(countdown_.seconds_left(now)) +
-                             " s\nEsc cancels",
+    const int left = countdown_.seconds_left(now);
+    if (left == countdown_shown_) return;
+    countdown_shown_ = left;
+    overlay_->set_banner("Next: " + next_label_ + " plays in " + std::to_string(left) + " s\nEsc cancels",
                          color::kText);
   }
 
@@ -448,13 +450,12 @@ class PlayerScreen : public Screen {
     (entry.audio ? audio : subtitle) = entry.stream;
     close_track_menu();
     if (audio == plan_.audio_index && subtitle == plan_.subtitle_index) return;
-    loading_text_ = "Loading...";
+    std::string banner = "Loading...";
     if (subtitle >= 0) {
       const jf::MediaStream* s = item_.media_sources[0].stream_by_index(subtitle);
-      if (s && !s->is_text_subtitle) loading_text_ = "Burned-in subtitles start slowly";
+      if (s && !s->is_text_subtitle) banner = "Burned-in subtitles start slowly";
     }
-    reload(index_or_none(audio), index_or_none(subtitle), ctx_.play_mode());
-    loading_text_ = "Loading...";
+    reload(index_or_none(audio), index_or_none(subtitle), ctx_.play_mode(), banner);
   }
 
   // ------------------------------------------------------------------- reports
@@ -513,7 +514,7 @@ class PlayerScreen : public Screen {
   std::optional<uint32_t> buffering_since_;
   std::string next_id_;
   std::string next_label_;
-  std::string loading_text_ = "Loading...";
+  int countdown_shown_ = -1;  // the seconds the banner shows, -1 = none yet
   uint32_t status_read_ms_ = 0;
   bool started_ = false;
   bool reported_start_ = false;

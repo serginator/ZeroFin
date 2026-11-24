@@ -5,10 +5,6 @@
 #include "ui/widgets.h"
 #include "ui_core/format.h"
 
-#ifndef ZEROFIN_VERSION_STRING
-#define ZEROFIN_VERSION_STRING "dev"
-#endif
-
 namespace zerofin::app {
 namespace {
 
@@ -188,7 +184,8 @@ class DetailScreen : public Screen {
     if (busy_ || !source()) return;
     busy_ = true;
     set_status("Preparing...", color::kAccent);
-    jf::Item item = item_;
+    const std::string id = item_.id;
+    const jf::MediaSource source = item_.media_sources[0];
     auto client = ctx_.client;
     const auto mode = ctx_.play_mode();
     std::optional<int> audio;
@@ -197,10 +194,10 @@ class DetailScreen : public Screen {
     if (sub_ids_[sub_sel_] >= 0) sub = sub_ids_[sub_sel_];
     const int64_t start_ticks = resume ? resume_ticks_ : 0;
     async(
-        [item, client, mode, audio, sub, start_ticks] {
+        [id, source, client, mode, audio, sub, start_ticks] {
           jf::PlayRequest req;
-          req.item_id = item.id;
-          req.source = &item.media_sources[0];
+          req.item_id = id;
+          req.source = &source;
           req.mode = mode;
           req.audio_index = audio;
           req.subtitle_index = sub;
@@ -211,7 +208,7 @@ class DetailScreen : public Screen {
           busy_ = false;
           set_status("");
           if (!r) {
-            if (!handle_auth_error(ctx_, r.error())) ctx_.toast->show(error_text(r.error()), Toast::Kind::Error, 3500);
+            report_error(ctx_, r.error());
             return;
           }
           refresh_on_return_ = true;
@@ -283,9 +280,7 @@ class SettingsScreen : public Screen {
     item("Always transcode", ctx_.config.play_mode == "transcode" ? "On" : "Off", false, [this] {
       ctx_.config.play_mode = ctx_.config.play_mode == "transcode" ? "auto" : "transcode";
       ctx_.save_config();
-      const int keep = list_->selected();
       rebuild();
-      if (keep >= 0) list_->select(static_cast<size_t>(keep));
     });
     header("Account");
     item("Server", ctx_.config.server_name, true, nullptr);

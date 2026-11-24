@@ -32,12 +32,12 @@ struct AppContext {
   std::function<std::shared_ptr<jf::Client>(const std::string& server_url)> client_factory;
   std::function<std::vector<jf::DiscoveredServer>()> discover;
 
-  // Makes the player backend. Null when the build has no player.
+  // Makes the player backend. Always set. The backend it returns is null when the build has no player.
   std::function<std::unique_ptr<player::PlayerBackend>()> make_backend;
   bool demo = false;  // ZEROFIN_DEMO: fake server, fake player, fake status values
   int volume = 100;   // 0 to 100, kept while the app runs
 
-  // Called when the user starts a title. The player screen replaces the default in step 4.
+  // Called when the user starts a title. Opens the player, or shows the plan when the build has no player.
   std::function<void(const jf::PlaybackPlan&, const jf::Item&)> start_playback;
 
   jf::PlayMode play_mode() const {

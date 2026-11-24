@@ -6,10 +6,6 @@
 
 #include "ui/theme.h"
 
-#ifndef ZEROFIN_ASSETS_SOURCE_DIR
-#define ZEROFIN_ASSETS_SOURCE_DIR "assets"
-#endif
-
 namespace zerofin::app {
 namespace {
 

@@ -71,6 +71,8 @@ class PlayerOverlay {
   int duration_text_s_ = -1;
   int fill_w_ = -1;
   std::string banner_text_;
+  uint32_t banner_color_ = color::kText;  // the colour the label already has
+  bool banner_shown_ = false;
 };
 
 }  // namespace zerofin::app

@@ -12,12 +12,9 @@ set(ZEROFIN_MAINTAINER "serginator <serginator@gmail.com>"
     CACHE STRING "Maintainer field of the .deb (the Store rejects a placeholder)")
 set(ZEROFIN_DEB_REVISION "" CACHE STRING "Optional Debian revision, for example 1 gives 0.1.0-1")
 
-set(_zerofin_gen "${CMAKE_CURRENT_BINARY_DIR}/generated/package")
-configure_file("${PROJECT_SOURCE_DIR}/packaging/zerofin.desktop.in" "${_zerofin_gen}/zerofin.desktop" COPYONLY)
-
 # Everything is in the component "zerofin", so the package does not take the LVGL headers and libraries.
 install(TARGETS zerofin RUNTIME DESTINATION share/APPLaunch/bin COMPONENT zerofin)
-install(FILES "${_zerofin_gen}/zerofin.desktop" DESTINATION share/APPLaunch/applications COMPONENT zerofin)
+install(FILES "${PROJECT_SOURCE_DIR}/packaging/zerofin.desktop" DESTINATION share/APPLaunch/applications COMPONENT zerofin)
 install(FILES "${PROJECT_SOURCE_DIR}/assets/images/zerofin.png" DESTINATION share/APPLaunch/share/images COMPONENT zerofin)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/assets/fonts/" DESTINATION share/zerofin/fonts COMPONENT zerofin
         PATTERN ".DS_Store" EXCLUDE)

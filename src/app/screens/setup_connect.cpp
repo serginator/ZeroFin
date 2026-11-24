@@ -12,6 +12,13 @@ std::string short_address(const std::string& address) {
   return scheme == std::string::npos ? address : address.substr(scheme + 3);
 }
 
+// Stores the login, greets the user and opens the home screen.
+void finish_login(AppContext& ctx, const jf::AuthResult& auth) {
+  ctx.set_login(auth);
+  ctx.toast->show("Signed in as " + auth.user.name, Toast::Kind::Success);
+  go_home(ctx);
+}
+
 // ---------------------------------------------------------------- server list
 
 class SetupScreen : public Screen {
@@ -143,8 +150,8 @@ class ConnectScreen : public Screen {
   void build() override {
     const std::string server = ctx_.config.server_name.empty() ? short_address(ctx_.config.server_url)
                                                                   : ctx_.config.server_name;
-    server_ = make_label(root_, ctx_.fonts.bold, color::kText, 8, 25, 304);
-    lv_label_set_text(server_, server.c_str());
+    lv_obj_t* server_label = make_label(root_, ctx_.fonts.bold, color::kText, 8, 25, 304);
+    lv_label_set_text(server_label, server.c_str());
     lv_obj_t* help = make_label(root_, ctx_.fonts.small, color::kDim, 8, 44, 304, LV_LABEL_LONG_MODE_WRAP);
     lv_label_set_text(help, "On another device open Jellyfin, go to\nSettings > Quick Connect and type this code:");
     code_ = make_label(root_, ctx_.fonts.big, color::kAccent, 0, 76, kScreenW, LV_LABEL_LONG_MODE_CLIP);
@@ -233,13 +240,10 @@ class ConnectScreen : public Screen {
         start();
         return;
       }
-      ctx_.set_login(r.value());
-      ctx_.toast->show("Signed in as " + r.value().user.name, Toast::Kind::Success);
-      go_home(ctx_);
+      finish_login(ctx_, r.value());
     });
   }
 
-  lv_obj_t* server_ = nullptr;
   lv_obj_t* code_ = nullptr;
   lv_obj_t* info_ = nullptr;
   lv_timer_t* timer_ = nullptr;
@@ -265,8 +269,8 @@ class PasswordLoginScreen : public Screen {
     lv_label_set_text(l2, "Password");
     pass_ = std::make_unique<TextFieldView>(root_, ctx_.fonts, 8, 90, 304, 28);
     pass_->set_mask(true);
-    hint_ = make_label(root_, ctx_.fonts.small, color::kDim, 8, 128, 304, LV_LABEL_LONG_MODE_WRAP);
-    lv_label_set_text(hint_, "Up/Down or Tab: switch field\nEnter: next, then sign in   Esc: back");
+    lv_obj_t* hint = make_label(root_, ctx_.fonts.small, color::kDim, 8, 128, 304, LV_LABEL_LONG_MODE_WRAP);
+    lv_label_set_text(hint, "Up/Down or Tab: switch field\nEnter: next, then sign in   Esc: back");
     focus(0);
   }
 
@@ -316,15 +320,12 @@ class PasswordLoginScreen : public Screen {
               ctx_.toast->show(wrong ? "Wrong username or password" : error_text(r.error()), Toast::Kind::Error, 3500);
               return;
             }
-            ctx_.set_login(r.value());
-            ctx_.toast->show("Signed in as " + r.value().user.name, Toast::Kind::Success);
-            go_home(ctx_);
+            finish_login(ctx_, r.value());
           });
   }
 
   std::unique_ptr<TextFieldView> user_;
   std::unique_ptr<TextFieldView> pass_;
-  lv_obj_t* hint_ = nullptr;
   int field_ = 0;
   bool busy_ = false;
 };

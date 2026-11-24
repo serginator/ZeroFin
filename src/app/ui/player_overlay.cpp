@@ -101,11 +101,7 @@ PlayerOverlay::~PlayerOverlay() {
 void PlayerOverlay::set_controls_visible(bool visible) {
   if (visible == controls_visible_) return;
   controls_visible_ = visible;
-  if (visible) {
-    lv_obj_remove_flag(controls_, LV_OBJ_FLAG_HIDDEN);
-  } else {
-    lv_obj_add_flag(controls_, LV_OBJ_FLAG_HIDDEN);
-  }
+  lv_obj_set_flag(controls_, LV_OBJ_FLAG_HIDDEN, !visible);
 }
 
 void PlayerOverlay::set_focus(ui::PlayerIcon icon, const bool enabled[kIconCount]) {
@@ -144,11 +140,7 @@ void PlayerOverlay::set_position(double position_s, double duration_s) {
   if (dur != duration_text_s_) {
     duration_text_s_ = dur;
     lv_label_set_text(duration_label_, known ? ui::format_timecode(dur).c_str() : "");
-    if (known) {
-      lv_obj_remove_flag(track_, LV_OBJ_FLAG_HIDDEN);
-    } else {
-      lv_obj_add_flag(track_, LV_OBJ_FLAG_HIDDEN);
-    }
+    lv_obj_set_flag(track_, LV_OBJ_FLAG_HIDDEN, !known);
   }
   const double fraction = known ? std::clamp(position_s / duration_s, 0.0, 1.0) : 0.0;
   const int w = static_cast<int>(fraction * kTrackW);
@@ -159,26 +151,21 @@ void PlayerOverlay::set_position(double position_s, double duration_s) {
 }
 
 void PlayerOverlay::set_status(const platform::StatusSnapshot& status) {
+  lv_obj_set_flag(wifi_, LV_OBJ_FLAG_HIDDEN, !status.dbm);
   if (status.dbm) {
     const int bars = ui::signal_bars(*status.dbm);
-    lv_obj_remove_flag(wifi_, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_text_color(
         wifi_, lv_color_hex(bars >= 3 ? color::kText : (bars == 2 ? color::kWarn : color::kError)), 0);
-  } else {
-    lv_obj_add_flag(wifi_, LV_OBJ_FLAG_HIDDEN);
   }
+  lv_obj_set_flag(battery_, LV_OBJ_FLAG_HIDDEN, !status.battery);
+  lv_obj_set_flag(percent_, LV_OBJ_FLAG_HIDDEN, !status.battery);
   if (status.battery) {
-    lv_obj_remove_flag(battery_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(percent_, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(battery_, battery_symbol(*status.battery));
     lv_obj_set_style_text_color(
         battery_,
         lv_color_hex(status.battery->charging ? color::kGood : (status.battery->percent < 13 ? color::kError : color::kText)),
         0);
     lv_label_set_text(percent_, (std::to_string(status.battery->percent) + "%").c_str());
-  } else {
-    lv_obj_add_flag(battery_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(percent_, LV_OBJ_FLAG_HIDDEN);
   }
   lv_label_set_text(time_, ui::format_clock(status.hour, status.minute).c_str());
 }
@@ -219,9 +206,13 @@ void PlayerOverlay::set_banner(const std::string& text, uint32_t text_color) {
   if (text.empty()) {
     if (!banner_text_.empty()) lv_obj_add_flag(banner_box_, LV_OBJ_FLAG_HIDDEN);
     banner_text_.clear();
+    banner_shown_ = false;
     return;
   }
-  lv_obj_set_style_text_color(banner_, lv_color_hex(text_color), 0);
+  if (text_color != banner_color_) {
+    banner_color_ = text_color;
+    lv_obj_set_style_text_color(banner_, lv_color_hex(text_color), 0);
+  }
   if (text != banner_text_) {
     banner_text_ = text;
     lv_label_set_text(banner_, text.c_str());
@@ -232,7 +223,10 @@ void PlayerOverlay::set_banner(const std::string& text, uint32_t text_color) {
     lv_obj_set_y(banner_box_, (kScreenH - h) / 2 - 10);
     lv_obj_set_y(banner_, 8);
   }
-  lv_obj_remove_flag(banner_box_, LV_OBJ_FLAG_HIDDEN);
+  if (!banner_shown_) {
+    banner_shown_ = true;
+    lv_obj_remove_flag(banner_box_, LV_OBJ_FLAG_HIDDEN);
+  }
 }
 
 }  // namespace zerofin::app

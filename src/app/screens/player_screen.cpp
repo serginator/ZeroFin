@@ -228,6 +228,7 @@ class PlayerScreen : public Screen {
           item_ = std::move(r.value().item);
           plan_ = std::move(r.value().plan);
           retried_ = false;
+          force_transcode_ = false;
           switching_ = false;
           start_stream();
           update_neighbors();
@@ -313,6 +314,7 @@ class PlayerScreen : public Screen {
   void on_playback_error() {
     if (plan_.method == jf::Method::DirectPlay && !retried_) {
       retried_ = true;
+      force_transcode_ = true;  // a later track change must not go back to the direct play that failed
       reload(index_or_none(plan_.audio_index), index_or_none(plan_.subtitle_index), jf::PlayMode::AlwaysTranscode,
              "Trying a transcode...");
       return;
@@ -455,7 +457,8 @@ class PlayerScreen : public Screen {
       const jf::MediaStream* s = item_.media_sources[0].stream_by_index(subtitle);
       if (s && !s->is_text_subtitle) banner = "Burned-in subtitles start slowly";
     }
-    reload(index_or_none(audio), index_or_none(subtitle), ctx_.play_mode(), banner);
+    reload(index_or_none(audio), index_or_none(subtitle),
+           force_transcode_ ? jf::PlayMode::AlwaysTranscode : ctx_.play_mode(), banner);
   }
 
   // ------------------------------------------------------------------- reports
@@ -520,6 +523,7 @@ class PlayerScreen : public Screen {
   bool reported_start_ = false;
   bool switching_ = false;
   bool retried_ = false;
+  bool force_transcode_ = false;  // set after a direct play failed: this item plays as a transcode
   bool menu_open_ = false;
   bool muted_ = false;
   bool left_ = false;

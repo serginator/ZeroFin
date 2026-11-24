@@ -150,6 +150,15 @@ TEST_CASE("server errors map to error kinds") {
   CHECK(f.client.views().error().kind == ErrorKind::Unauthorized);
 }
 
+TEST_CASE("a redirect that was not followed is an error, not an empty success") {
+  Fixture f;
+  f.http.on("GET /UserViews", 302);
+  const auto r = f.client.views();
+  REQUIRE_FALSE(r);
+  CHECK(r.error().kind == ErrorKind::Http);
+  CHECK(r.error().http_status == 302);
+}
+
 TEST_CASE("browse calls need a login and make no request without one") {
   FakeHttp http;
   Client client(http, test_info(), "http://srv:8096");

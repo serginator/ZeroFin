@@ -37,7 +37,8 @@ StreamType stream_type(const std::string& t) {
 }
 
 ItemType item_type(const std::string& t) {
-  if (t == "Movie") return ItemType::Movie;
+  // A plain Video (a home video) plays like a movie.
+  if (t == "Movie" || t == "Video") return ItemType::Movie;
   if (t == "Series") return ItemType::Series;
   if (t == "Season") return ItemType::Season;
   if (t == "Episode") return ItemType::Episode;

@@ -8,30 +8,65 @@
 namespace zerofin::jf {
 namespace {
 
-std::string quote(const std::string& s) {
-  std::string q = "'";
-  for (char c : s) q += (c == '\'') ? std::string("'\\''") : std::string(1, c);
-  return q + "'";
+// Value of a curl config file line: inside double quotes, with the escapes curl reads.
+std::string config_quote(const std::string& s) {
+  std::string q = "\"";
+  for (char c : s) {
+    switch (c) {
+      case '\\': q += "\\\\"; break;
+      case '"': q += "\\\""; break;
+      case '\n': q += "\\n"; break;
+      case '\r': q += "\\r"; break;
+      case '\t': q += "\\t"; break;
+      case '\v': q += "\\v"; break;
+      default: q += c;
+    }
+  }
+  return q + "\"";
 }
+
+// A private temp file (mkstemp makes it mode 0600). Removed when this object goes out of scope.
+class TempFile {
+ public:
+  explicit TempFile(const std::string& content) {
+    if (content.empty()) return;
+    char path[] = "/tmp/zerofin_http_XXXXXX";
+    const int fd = mkstemp(path);
+    if (fd < 0) return;
+    const bool ok = write(fd, content.data(), content.size()) == static_cast<ssize_t>(content.size());
+    close(fd);
+    if (ok) path_ = path; else unlink(path);
+  }
+  ~TempFile() {
+    if (!path_.empty()) unlink(path_.c_str());
+  }
+  TempFile(const TempFile&) = delete;
+  TempFile& operator=(const TempFile&) = delete;
+  const std::string& path() const { return path_; }
+
+ private:
+  std::string path_;
+};
 
 }  // namespace
 
 HttpResponse CurlCliHttpClient::send(const HttpRequest& request) {
-  std::string cmd = "/usr/bin/curl -sS -m " + std::to_string(request.timeout_ms / 1000 + 1) + " -X " +
-                    quote(request.method);
-  for (const auto& h : request.headers) cmd += " -H " + quote(h.name + ": " + h.value);
-
-  char body_path[] = "/tmp/zerofin_http_body_XXXXXX";
-  int fd = -1;
-  if (!request.body.empty()) {
-    fd = mkstemp(body_path);
-    if (fd >= 0) {
-      (void)!write(fd, request.body.data(), request.body.size());
-      close(fd);
-      cmd += " --data-binary @" + std::string(body_path);
-    }
+  // The URL (it can hold an api_key) and the headers (they hold the access token) go in a private
+  // config file, not on the command line, where any local user could read them with ps.
+  std::string config = "url = " + config_quote(request.url) + "\nrequest = " + config_quote(request.method) + "\n";
+  for (const auto& h : request.headers) config += "header = " + config_quote(h.name + ": " + h.value) + "\n";
+  const TempFile config_file(config);
+  const TempFile body_file(request.body);
+  HttpResponse res;
+  if (config_file.path().empty() || (!request.body.empty() && body_file.path().empty())) {
+    res.error = "cannot create a temporary file";
+    return res;
   }
-  cmd += " -w '\\n%{http_code}' " + quote(request.url) + " 2>&1";
+
+  std::string cmd = "/usr/bin/curl -sS -L --max-redirs 5 -m " + std::to_string(request.timeout_ms / 1000 + 1) +
+                    " -K '" + config_file.path() + "'";
+  if (!request.body.empty()) cmd += " --data-binary '@" + body_file.path() + "'";
+  cmd += " -w '\n%{http_code}' 2>&1";
 
   std::string out;
   if (FILE* p = popen(cmd.c_str(), "r")) {
@@ -40,9 +75,7 @@ HttpResponse CurlCliHttpClient::send(const HttpRequest& request) {
     while ((n = fread(buf, 1, sizeof(buf), p)) > 0) out.append(buf, n);
     pclose(p);
   }
-  if (fd >= 0) unlink(body_path);
 
-  HttpResponse res;
   const auto nl = out.rfind('\n');
   const int status = nl == std::string::npos ? 0 : std::atoi(out.c_str() + nl + 1);
   if (status == 0) {

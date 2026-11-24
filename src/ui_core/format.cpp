@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <map>
 
+#include "jellyfin/playback_decision.h"
 #include "jellyfin/resume.h"
 #include "jellyfin/text.h"
 
@@ -125,10 +126,8 @@ std::string subtitle_label(const jf::MediaStream& s) {
   std::string out = stream_name(s);
   const std::string codec = subtitle_codec_name(s.codec);
   if (!codec.empty()) out += " · " + codec;
-  const std::string c = to_lower(s.codec);
-  const bool image = !s.is_text_subtitle && (c == "pgssub" || c == "pgs" || c == "hdmv_pgs_subtitle" ||
-                                             c == "dvdsub" || c == "dvd_subtitle" || c == "dvbsub" ||
-                                             c == "dvb_subtitle");
+  // The same rule as the playback decision, so the label matches what play does.
+  const bool image = jf::is_image_subtitle(s);
   if (image) out += " (burned in)";
   if (s.is_forced) out += " forced";
   return out;

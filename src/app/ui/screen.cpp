@@ -9,7 +9,9 @@ Screen::Screen(AppContext& ctx, std::string title)
 
 Screen::~Screen() {
   *alive_ = false;
-  for (auto& [timer, slot] : timers_) lv_timer_delete(timer);
+  for (auto& [timer, slot] : timers_) {
+    if (!slot->dead) lv_timer_delete(timer);
+  }
   if (root_) lv_obj_delete(root_);
 }
 
@@ -39,11 +41,16 @@ void Screen::set_status(const std::string& text, uint32_t color) {
 }
 
 lv_timer_t* Screen::add_timer(uint32_t period_ms, std::function<void()> fn) {
-  auto slot = std::make_unique<TimerSlot>(TimerSlot{std::move(fn)});
+  auto slot = std::make_unique<TimerSlot>(TimerSlot{std::move(fn), this});
   lv_timer_t* timer = lv_timer_create(
       [](lv_timer_t* t) {
         auto* s = static_cast<TimerSlot*>(lv_timer_get_user_data(t));
+        Screen* owner = s->owner;
+        s->running = true;
         s->fn();
+        s->running = false;
+        // The callback may have removed its own timer: free the slot now that it has returned.
+        if (s->dead) owner->drop_dead_timers();
       },
       period_ms, slot.get());
   timers_.emplace_back(timer, std::move(slot));
@@ -52,11 +59,20 @@ lv_timer_t* Screen::add_timer(uint32_t period_ms, std::function<void()> fn) {
 
 void Screen::remove_timer(lv_timer_t* timer) {
   for (auto it = timers_.begin(); it != timers_.end(); ++it) {
-    if (it->first == timer) {
-      lv_timer_delete(timer);
+    if (it->first != timer || it->second->dead) continue;
+    lv_timer_delete(timer);
+    if (it->second->running) {
+      it->second->dead = true;
+    } else {
       timers_.erase(it);
-      return;
     }
+    return;
+  }
+}
+
+void Screen::drop_dead_timers() {
+  for (auto it = timers_.begin(); it != timers_.end();) {
+    if (it->second->dead && !it->second->running) it = timers_.erase(it); else ++it;
   }
 }
 

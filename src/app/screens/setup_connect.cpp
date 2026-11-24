@@ -118,18 +118,22 @@ class SetupScreen : public Screen {
     ctx_.nav->push(make_text_input_screen(ctx_, std::move(spec)));
   }
 
+  // Asks the server before the address is saved, so a mistyped address does not replace the
+  // working server (and its login).
   void check_server(const std::string& url) {
-    ctx_.use_server(url, "");
+    auto client = ctx_.client_factory ? ctx_.client_factory(url) : nullptr;
+    if (!client) {
+      ctx_.toast->show("Cannot connect to a server", Toast::Kind::Error, 3500);
+      return;
+    }
     set_status("Checking...");
-    auto client = ctx_.client;
-    async([client] { return client->public_info(); }, [this](jf::Result<jf::ServerInfo> r) {
+    async([client] { return client->public_info(); }, [this, url](jf::Result<jf::ServerInfo> r) {
       set_status("");
       if (!r) {
         ctx_.toast->show(error_text(r.error()), Toast::Kind::Error, 3500);
         return;
       }
-      ctx_.config.server_name = r.value().name;
-      ctx_.save_config();
+      ctx_.use_server(url, r.value().name);
       ctx_.nav->push(make_connect_screen(ctx_));
     });
   }
@@ -187,14 +191,15 @@ class ConnectScreen : public Screen {
     lv_obj_set_style_text_color(info_, lv_color_hex(c), 0);
   }
 
-  void start() {
+  // `notice` (an error from the last try) stays on the screen next to the new code.
+  void start(const std::string& notice = {}) {
     if (starting_ || signing_in_) return;
     starting_ = true;
     secret_.clear();
     lv_label_set_text(code_, "...");
-    say("Asking the server for a code...");
+    say(notice.empty() ? "Asking the server for a code..." : notice, notice.empty() ? color::kDim : color::kError);
     auto client = ctx_.client;
-    async([client] { return client->quick_connect_initiate(); }, [this](jf::Result<jf::QuickConnectSession> r) {
+    async([client] { return client->quick_connect_initiate(); }, [this, notice](jf::Result<jf::QuickConnectSession> r) {
       starting_ = false;
       if (!r) {
         say(error_text(r.error()) + ". Enter: try again", color::kError);
@@ -204,7 +209,7 @@ class ConnectScreen : public Screen {
       std::string code = r.value().code;
       if (code.size() == 6) code.insert(3, " ");
       lv_label_set_text(code_, code.c_str());
-      say("Waiting for you to approve it...");
+      if (notice.empty()) say("Waiting for you to approve it...");
       if (!timer_) timer_ = add_timer(2000, [this] { poll(); });
     });
   }
@@ -214,8 +219,9 @@ class ConnectScreen : public Screen {
     in_flight_ = true;
     auto client = ctx_.client;
     auto secret = secret_;
-    async([client, secret] { return client->quick_connect_authorized(secret); }, [this](jf::Result<bool> r) {
+    async([client, secret] { return client->quick_connect_authorized(secret); }, [this, secret](jf::Result<bool> r) {
       in_flight_ = false;
+      if (secret != secret_) return;  // the user asked for a new code meanwhile: this answer is old
       if (!r) {
         if (r.error().kind == jf::ErrorKind::Network) {
           say("No connection. Trying again...", color::kWarn);
@@ -224,20 +230,18 @@ class ConnectScreen : public Screen {
         }
         return;
       }
-      if (r.value()) sign_in();
+      if (r.value()) sign_in(secret);
     });
   }
 
-  void sign_in() {
+  void sign_in(const std::string& secret) {
     signing_in_ = true;
     say("Signing in...");
     auto client = ctx_.client;
-    auto secret = secret_;
     async([client, secret] { return client->login_quick_connect(secret); }, [this](jf::Result<jf::AuthResult> r) {
       signing_in_ = false;
       if (!r) {
-        say(error_text(r.error()), color::kError);
-        start();
+        start(error_text(r.error()) + ". New code:");
         return;
       }
       finish_login(ctx_, r.value());

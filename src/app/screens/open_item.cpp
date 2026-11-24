@@ -11,6 +11,7 @@ std::string include_types_for(const jf::Item& folder) {
   if (t == "movies") return "Movie";
   if (t == "tvshows") return "Series";
   if (t == "boxsets") return "BoxSet";
+  if (t == "homevideos") return "Video";
   if (folder.raw_type == "BoxSet") return "Movie,Series";
   if (folder.type == jf::ItemType::Library) return "Movie,Series,BoxSet";
   return "";

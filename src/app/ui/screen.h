@@ -52,9 +52,15 @@ class Screen {
   lv_obj_t* root_ = nullptr;
 
  private:
+  // A timer may remove itself from inside its own callback. The slot then stays until the callback
+  // has returned (`dead`), because the running std::function lives in it.
   struct TimerSlot {
     std::function<void()> fn;
+    Screen* owner = nullptr;
+    bool running = false;
+    bool dead = false;
   };
+  void drop_dead_timers();
 
   std::string title_text_;
   lv_obj_t* title_ = nullptr;

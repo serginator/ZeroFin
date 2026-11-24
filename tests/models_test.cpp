@@ -81,6 +81,12 @@ TEST_CASE("parse_item_list maps library types") {
   CHECK(list.value().items[1].type == ItemType::Other);
 }
 
+TEST_CASE("parse_item_list treats a home video as a playable movie") {
+  auto list = parse_item_list(R"({"Items":[{"Id":"v1","Type":"Video"}]})");
+  REQUIRE(list.ok());
+  CHECK(list.value().items[0].type == ItemType::Movie);
+}
+
 TEST_CASE("parsers return a Parse error for bad input") {
   CHECK(parse_item_list("not json").error().kind == ErrorKind::Parse);
   CHECK(parse_item_list("[]").error().kind == ErrorKind::Parse);

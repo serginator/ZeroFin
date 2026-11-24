@@ -192,7 +192,12 @@ class ItemListScreen : public Screen {
   bool on_key(const ui::KeyEvent& e) override {
     if (list_->handle_key(e)) {
       update_status();
-      if (list_->near_end(6)) load_more();
+      // After a failed page, wait for R: a key press must not start a new request and a new toast each time.
+      if (list_->near_end(6) && !failed_) load_more();
+      return true;
+    }
+    if (failed_ && !items_.empty() && e.key == ui::Key::Char && (e.ch == 'r' || e.ch == 'R')) {
+      load_more();
       return true;
     }
     if (e.key == ui::Key::Enter && !e.repeat) {
@@ -224,7 +229,7 @@ class ItemListScreen : public Screen {
         if (items_.empty()) {
           list_->set_message(error_text(r.error()) + "\n\nEnter: try again", color::kError);
         } else {
-          ctx_.toast->show(error_text(r.error()), Toast::Kind::Error);
+          ctx_.toast->show(error_text(r.error()) + ". R: retry", Toast::Kind::Error);
         }
         return;
       }

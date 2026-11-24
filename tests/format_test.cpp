@@ -72,6 +72,7 @@ TEST_CASE("subtitle_label marks image subtitles and forced tracks") {
   jf::MediaStream text;
   text.language = "eng";
   text.codec = "subrip";
+  text.type = jf::StreamType::Subtitle;
   text.is_text_subtitle = true;
   CHECK(subtitle_label(text) == "English · SRT");
   text.is_forced = true;
@@ -80,7 +81,15 @@ TEST_CASE("subtitle_label marks image subtitles and forced tracks") {
   jf::MediaStream pgs;
   pgs.language = "spa";
   pgs.codec = "PGSSUB";
+  pgs.type = jf::StreamType::Subtitle;
   CHECK(subtitle_label(pgs) == "Spanish · PGS (burned in)");
+
+  // A codec the list does not know, and that is not text, is burned in by the playback decision too.
+  jf::MediaStream odd;
+  odd.language = "eng";
+  odd.codec = "xsub";
+  odd.type = jf::StreamType::Subtitle;
+  CHECK(subtitle_label(odd).find("(burned in)") != std::string::npos);
 }
 
 TEST_CASE("truncate_text counts characters, not bytes") {

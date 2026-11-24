@@ -49,7 +49,8 @@ Result<std::string> Client::request(const std::string& method, const std::string
   if (res.status == 0) return Error{ErrorKind::Network, res.error.empty() ? "no response" : res.error, 0};
   if (res.status == 401) return Error{ErrorKind::Unauthorized, "the server rejected the login", 401};
   if (res.status == 404) return Error{ErrorKind::NotFound, "not found", 404};
-  if (res.status >= 400) return Error{ErrorKind::Http, "HTTP " + std::to_string(res.status), res.status};
+  // A redirect that the transport did not follow (or followed too often) is not a success with an empty body.
+  if (res.status >= 300) return Error{ErrorKind::Http, "HTTP " + std::to_string(res.status), res.status};
   return std::move(res.body);
 }
 

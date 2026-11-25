@@ -1,14 +1,15 @@
 {
   "package_name": "zerofin",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "app_name": "ZeroFin",
   "bin_name": "zerofin",
   "description": "Video client for Jellyfin servers on the Cardputer Zero. Not an official Jellyfin app.",
-
   "store": {
     "summary": "Browse and play video from your Jellyfin server on the Cardputer Zero.",
     "description": "ZeroFin is a non-official Jellyfin client made for the 320x170 screen and the 46-key keyboard.\n\nSign in with Quick Connect, a password, or a server address. Browse movies, series and collections with posters. Continue what you started and see the next episode. Search your libraries. Play video with hardware decode, choose audio and subtitle tracks, and jump to the next episode.\n\nZeroFin needs a Jellyfin server on your network. It does not store or share your media. Jellyfin is a trademark of its owners. ZeroFin is not made or endorsed by the Jellyfin project.",
-    "categories": ["Media"],
+    "categories": [
+      "Media"
+    ],
     "screenshots": [
       "screenshots/home.png",
       "screenshots/library.png",
@@ -19,7 +20,10 @@
     "icon": "assets/images/zerofin-256.png",
     "license": "MIT",
     "source_repo": "https://github.com/serginator/ZeroFin",
-    "author": { "github": "serginator", "display_name": "serginator" },
+    "author": {
+      "github": "serginator",
+      "display_name": "serginator"
+    },
     "share_code": "ZFIN",
     "permissions": {
       "camera": false,

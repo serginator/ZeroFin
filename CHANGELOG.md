@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/serginator/ZeroFin/compare/v0.1.1...v0.2.0) (2026-11-25)
+
+
+### Features
+
+* poster home screen, start banner, new logo and circuit background ([0068c5a](https://github.com/serginator/ZeroFin/commit/0068c5aab1ff804fabb10baad35645f12074d3ff))
+
 ## [0.1.1](https://github.com/serginator/ZeroFin/compare/v0.1.0...v0.1.1) (2026-11-24)
 
 

@@ -43,6 +43,13 @@
 #define LV_USE_FONT_PLACEHOLDER 1
 
 #define LV_USE_THEME_DEFAULT 0
+/* Poster pictures: JPEG from memory (TJPGD needs the memory file system). The cache keeps decoded posters. */
+#define LV_USE_TJPGD 1
+#define LV_USE_FS_MEMFS 1
+#define LV_FS_MEMFS_LETTER 'M'
+#define LV_CACHE_DEF_SIZE (2 * 1024 * 1024)
+#define LV_IMAGE_HEADER_CACHE_DEF_CNT 64
+
 #define LV_USE_LABEL 1
 #define LV_USE_IMAGE 1
 #define LV_USE_CANVAS 1

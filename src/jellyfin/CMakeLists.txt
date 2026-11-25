@@ -5,6 +5,7 @@ add_library(zerofin_jellyfin STATIC
   demo_http.cpp
   device_profile.cpp
   discovery.cpp
+  image_fetch.cpp
   models.cpp
   playback_decision.cpp
   resume.cpp

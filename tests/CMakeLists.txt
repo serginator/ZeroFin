@@ -9,17 +9,23 @@ include(doctest)
 add_executable(zerofin_tests
   test_main.cpp
   auth_test.cpp
+  cards_test.cpp
+  circuit_background_test.cpp
   client_test.cpp
   device_profile_test.cpp
   demo_http_test.cpp
   discovery_test.cpp
   format_test.cpp
+  grid_cursor_test.cpp
   keys_test.cpp
   list_cursor_test.cpp
   models_test.cpp
   player_backend_test.cpp
   player_controls_test.cpp
   player_timers_test.cpp
+  image_cache_test.cpp
+  image_fetch_test.cpp
+  request_queue_test.cpp
   playlist_test.cpp
   playback_decision_test.cpp
   resume_test.cpp

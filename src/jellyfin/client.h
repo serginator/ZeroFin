@@ -81,6 +81,8 @@ class Client {
   Result<ItemList> views();
   Result<ItemList> resume_items(int limit = 12);
   Result<ItemList> next_up(int limit = 12);
+  // The newest items of a library. Episodes come grouped as their series.
+  Result<ItemList> latest(const std::string& parent_id, int limit = 16);
   Result<ItemList> items(const ItemQuery& query);
   Result<ItemList> seasons(const std::string& series_id);
   Result<ItemList> episodes(const std::string& series_id, const std::string& season_id);
@@ -94,7 +96,9 @@ class Client {
   Result<Unit> report_stopped(const ProgressReport& report);
 
   // URLs that need no request.
-  std::string image_url(const std::string& item_id, const std::string& tag, int max_width, int max_height) const;
+  // A poster request. It is built here and sent by jf::fetch_image on another thread, so it holds the URL
+  // and the Authorization header. It does not use the client again.
+  HttpRequest image_request(const ImageRef& ref, int max_width = 64, int max_height = 96) const;
   std::string subtitle_url(const std::string& item_id, const std::string& source_id, int stream_index,
                            const std::string& format = "srt") const;
 

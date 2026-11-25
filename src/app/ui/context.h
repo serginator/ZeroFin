@@ -14,6 +14,7 @@
 
 namespace zerofin::app {
 
+class ImageLoader;
 class Navigator;
 class Toast;
 
@@ -22,6 +23,8 @@ struct AppContext {
   Async* async = nullptr;
   Navigator* nav = nullptr;
   Toast* toast = nullptr;
+  ImageLoader* images = nullptr;  // poster downloads. Null in tests.
+  const lv_image_dsc_t* background = nullptr;  // the picture behind the screens. Null: a plain colour.
   Fonts fonts;
 
   storage::ConfigStore* store = nullptr;

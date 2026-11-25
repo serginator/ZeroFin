@@ -146,3 +146,55 @@ TEST_CASE("tick conversions") {
   CHECK(seconds_to_ticks(90.5) == 905'000'000);
   CHECK(ticks_to_seconds(6'000'000'000) == doctest::Approx(600.0));
 }
+
+namespace {
+Item first_item(const std::string& item_json) {
+  auto r = parse_item_list(R"({"Items":[)" + item_json + R"(],"TotalRecordCount":1})");
+  REQUIRE(r.ok());
+  return r.value().items.front();
+}
+}  // namespace
+
+TEST_CASE("SeriesPrimaryImageTag is parsed") {
+  const Item e = first_item(R"({"Id":"e1","Type":"Episode","SeriesId":"s1","SeriesPrimaryImageTag":"sTag"})");
+  CHECK(e.series_primary_image_tag == "sTag");
+}
+
+TEST_CASE("poster_ref uses the series poster for an episode") {
+  const Item e = first_item(
+      R"({"Id":"e1","Type":"Episode","SeriesId":"s1","SeriesPrimaryImageTag":"sTag","ImageTags":{"Primary":"stillTag"}})");
+  const ImageRef ref = poster_ref(e);
+  CHECK(ref.item_id == "s1");
+  CHECK(ref.tag == "sTag");
+}
+
+TEST_CASE("poster_ref uses the season poster, else the series poster") {
+  const Item own = first_item(R"({"Id":"se1","Type":"Season","SeriesId":"s1","ImageTags":{"Primary":"seTag"}})");
+  CHECK(poster_ref(own).item_id == "se1");
+  CHECK(poster_ref(own).tag == "seTag");
+  const Item none = first_item(R"({"Id":"se2","Type":"Season","SeriesId":"s1","SeriesPrimaryImageTag":"sTag"})");
+  CHECK(poster_ref(none).item_id == "s1");
+  CHECK(poster_ref(none).tag == "sTag");
+}
+
+TEST_CASE("poster_ref of a movie is its own") {
+  const Item m = first_item(R"({"Id":"m1","Type":"Movie","ImageTags":{"Primary":"tagA"}})");
+  CHECK(poster_ref(m).item_id == "m1");
+  CHECK(poster_ref(m).tag == "tagA");
+  const Item bare = first_item(R"({"Id":"m2","Type":"Movie"})");
+  CHECK_FALSE(poster_ref(bare).empty());
+  CHECK(poster_ref(bare).tag.empty());
+}
+
+TEST_CASE("parse_item_array reads a top-level array") {
+  auto r = parse_item_array(R"([{"Id":"a","Type":"Movie"},{"Id":"b","Type":"Series"}])");
+  REQUIRE(r.ok());
+  CHECK(r.value().items.size() == 2);
+  CHECK(r.value().total == 2);
+  CHECK(r.value().items[1].type == ItemType::Series);
+}
+
+TEST_CASE("parse_item_array rejects an object and bad JSON") {
+  CHECK_FALSE(parse_item_array(R"({"Items":[]})").ok());
+  CHECK_FALSE(parse_item_array("not json").ok());
+}

@@ -1,29 +1,14 @@
 #include <cstdio>
-#include <cstdlib>
-#include <filesystem>
 #include <string>
-#include <vector>
 
+#include "ui/assets.h"
 #include "ui/theme.h"
 
 namespace zerofin::app {
 namespace {
 
-std::string find_font_file(const std::string& name) {
-  std::vector<std::filesystem::path> roots;
-  if (const char* env = std::getenv("ZEROFIN_ASSETS"); env && *env) roots.emplace_back(env);
-  roots.emplace_back(ZEROFIN_ASSETS_SOURCE_DIR);
-  roots.emplace_back("/usr/share/zerofin");
-  for (const auto& root : roots) {
-    const auto candidate = root / "fonts" / name;
-    std::error_code ec;
-    if (std::filesystem::exists(candidate, ec)) return candidate.string();
-  }
-  return {};
-}
-
 const lv_font_t* load(const std::string& file, uint32_t size, const lv_font_t* fallback) {
-  const std::string path = find_font_file(file);
+  const std::string path = find_asset("fonts/" + file);
   if (path.empty()) {
     std::fprintf(stderr, "font %s not found, using the built-in font\n", file.c_str());
     return fallback;

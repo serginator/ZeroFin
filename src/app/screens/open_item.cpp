@@ -34,6 +34,7 @@ void open_series(AppContext& ctx, const jf::Item& series) {
   auto client = ctx.client;
   ItemListSpec spec;
   spec.title = series.name;
+  spec.posters = true;
   spec.paged = false;
   spec.loader = [client, id = series.id](int, int) { return client->seasons(id); };
   spec.on_select = [&ctx](const jf::Item& season) { open_season(ctx, season); };
@@ -45,6 +46,7 @@ void open_folder(AppContext& ctx, const jf::Item& folder) {
   auto client = ctx.client;
   ItemListSpec spec;
   spec.title = folder.name;
+  spec.posters = true;
   const std::string types = include_types_for(folder);
   spec.loader = [client, id = folder.id, types](int start, int limit) {
     jf::ItemQuery q;

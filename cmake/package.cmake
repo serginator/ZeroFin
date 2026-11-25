@@ -4,7 +4,7 @@
 #   /usr/share/APPLaunch/bin/zerofin
 #   /usr/share/APPLaunch/applications/zerofin.desktop
 #   /usr/share/APPLaunch/share/images/zerofin.png   (icon, relative to /usr/share/APPLaunch)
-#   /usr/share/zerofin/fonts/                       (the app looks here, see src/app/ui/fonts.cpp)
+#   /usr/share/zerofin/fonts/ and images/           (the app looks here, see src/app/ui/assets.cpp)
 #
 # Build the package:  cmake --build build --target package   (or: cpack --config build/CPackConfig.cmake)
 
@@ -18,6 +18,7 @@ install(FILES "${PROJECT_SOURCE_DIR}/packaging/zerofin.desktop" DESTINATION shar
 install(FILES "${PROJECT_SOURCE_DIR}/assets/images/zerofin.png" DESTINATION share/APPLaunch/share/images COMPONENT zerofin)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/assets/fonts/" DESTINATION share/zerofin/fonts COMPONENT zerofin
         PATTERN ".DS_Store" EXCLUDE)
+install(FILES "${PROJECT_SOURCE_DIR}/assets/images/banner-splash.jpg" DESTINATION share/zerofin/images COMPONENT zerofin)
 install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION share/doc/zerofin RENAME copyright COMPONENT zerofin)
 install(FILES "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md" DESTINATION share/doc/zerofin COMPONENT zerofin)
 

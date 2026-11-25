@@ -17,6 +17,7 @@ struct ItemListSpec {
   std::function<jf::Result<jf::ItemList>(int start, int limit)> loader;
   std::function<void(const jf::Item&)> on_select;  // UI thread
   ui::RowContext context = ui::RowContext::Browse;
+  bool posters = false;  // a grid of posters, else a text list
   bool paged = true;  // false when the loader returns everything in one call
   std::string empty_text = "Nothing here";
 };

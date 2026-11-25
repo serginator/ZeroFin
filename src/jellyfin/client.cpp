@@ -114,6 +114,17 @@ Result<ItemList> Client::next_up(int limit) {
                                         {"enableTotalRecordCount", "false"}});
 }
 
+Result<ItemList> Client::latest(const std::string& parent_id, int limit) {
+  if (!session_.logged_in()) return not_logged_in();
+  return parse_reply<ItemList>(request("GET", "/Items/Latest", {{"userId", session_.user_id},
+                                                                {"parentId", parent_id},
+                                                                {"limit", std::to_string(limit)},
+                                                                {"groupItems", "true"},
+                                                                {"enableImageTypes", "Primary"},
+                                                                {"imageTypeLimit", "1"}}),
+                               parse_item_array);
+}
+
 Result<ItemList> Client::items(const ItemQuery& q) {
   QueryParams params = {{"userId", session_.user_id},
                         {"sortBy", "SortName"},
@@ -260,12 +271,16 @@ Result<Unit> Client::report_stopped(const ProgressReport& r) { return report("/S
 
 // ---- URLs ----
 
-std::string Client::image_url(const std::string& item_id, const std::string& tag, int max_width,
-                              int max_height) const {
+HttpRequest Client::image_request(const ImageRef& ref, int max_width, int max_height) const {
   QueryParams q = {{"maxWidth", std::to_string(max_width)}, {"maxHeight", std::to_string(max_height)},
-                   {"quality", "80"}};
-  if (!tag.empty()) q.push_back({"tag", tag});
-  return url_for("/Items/" + percent_encode(item_id) + "/Images/Primary", q);
+                   {"quality", "80"}, {"format", "Jpg"}};
+  if (!ref.tag.empty()) q.push_back({"tag", ref.tag});
+  // The token goes in the Authorization header only. A token in the URL ends up in proxy and server logs.
+  HttpRequest req;
+  req.url = url_for("/Items/" + percent_encode(ref.item_id) + "/Images/Primary", q);
+  req.headers.push_back({"Authorization", authorization_header_value(info_, session_.token)});
+  req.timeout_ms = 15000;
+  return req;
 }
 
 std::string Client::subtitle_url(const std::string& item_id, const std::string& source_id, int stream_index,

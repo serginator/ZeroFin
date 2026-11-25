@@ -5,6 +5,7 @@
 
 #include "jellyfin/client.h"
 #include "jellyfin/demo_http.h"
+#include "jellyfin/image_fetch.h"
 #include "jellyfin/url.h"
 
 using namespace zerofin::jf;
@@ -127,4 +128,47 @@ TEST_CASE("the demo server answers 404 for an unknown route") {
   Demo d;
   d.login();
   CHECK(d.client->item("nope").error().kind == ErrorKind::NotFound);
+}
+
+TEST_CASE("Latest returns the newest items of a library") {
+  Demo d;
+  d.login();
+  auto r = d.client->latest("lib-movies", 5);
+  REQUIRE(r.ok());
+  CHECK(r.value().items.size() == 5);
+  for (const auto& it : r.value().items) CHECK(it.type == ItemType::Movie);
+  auto tv = d.client->latest("lib-anime", 16);
+  REQUIRE(tv.ok());
+  CHECK_FALSE(tv.value().items.empty());
+  for (const auto& it : tv.value().items) CHECK(it.type == ItemType::Series);
+}
+
+TEST_CASE("a poster request returns a baseline JPEG") {
+  Demo d;
+  d.login();
+  auto r = d.client->latest("lib-movies", 3);
+  REQUIRE(r.ok());
+  const Item& m = r.value().items.front();
+  auto jpeg = fetch_image(*d.http, d.client->image_request(poster_ref(m)));
+  REQUIRE(jpeg.ok());
+  CHECK(is_baseline_jpeg(jpeg.value()));
+}
+
+TEST_CASE("an episode poster is the series poster") {
+  Demo d;
+  d.login();
+  auto eps = d.client->episodes("s1", "s1-se1");
+  REQUIRE(eps.ok());
+  const ImageRef ref = poster_ref(eps.value().items.front());
+  CHECK(ref.item_id == "s1");
+  CHECK_FALSE(ref.tag.empty());
+  CHECK(fetch_image(*d.http, d.client->image_request(ref)).ok());
+}
+
+TEST_CASE("m5 has no poster") {
+  Demo d;
+  d.login();
+  auto jpeg = fetch_image(*d.http, d.client->image_request(ImageRef{"m5", ""}));
+  REQUIRE_FALSE(jpeg.ok());
+  CHECK(jpeg.error().kind == ErrorKind::NotFound);
 }

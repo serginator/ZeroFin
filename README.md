@@ -1,11 +1,13 @@
 # ZeroFin
 
-<img src="assets/images/zerofin.svg" width="96" alt="ZeroFin logo">
+<p align="center">
+  <img src="assets/images/banner.jpg" width="720" alt="ZeroFin: a non-official Jellyfin client for the Cardputer Zero">
+</p>
 
 A video client for [Jellyfin](https://jellyfin.org) on the M5Stack Cardputer Zero (320x170 screen, 46-key keyboard).
 Not an official Jellyfin app.
 
-Status: in development. The server login, browsing and search screens work. The player comes next.
+Status: in development. Login, browsing with posters, search and the player work.
 
 ## Build and test on a computer
 
@@ -24,6 +26,17 @@ ZEROFIN_DEMO=1 ./build-app/src/app/zerofin     # a fake server, no network neede
 ```
 
 Keys in the simulator: arrows, Enter, Esc, Tab, Backspace, typing. F1-F5 are the media keys.
+
+## Home screen and posters
+
+The home screen starts with a row of tiles (one per library, then Search and Settings). Under it are rows of
+posters: Keep watching, Next up, and Recent in each movie, TV or collection library. Up and Down change the row.
+Left and Right move inside a row. Enter opens the item. The library, series and season lists and Search show the
+posters in a grid of four columns.
+
+Posters are small JPEG files (64x96). One download runs at a time, on its own worker. They are kept in
+`$ZEROFIN_HOME/cache/images` (default `~/.config/ZeroFin/cache/images`, up to 50 MB, the oldest files go first).
+Delete that folder at any time. A title with no poster shows a grey card with its first letter.
 
 ## Player keys
 
@@ -88,11 +101,11 @@ See `src/jellyfin/device_profile.h` for the keys.
 | Folder | Content |
 |---|---|
 | `src/jellyfin/` | Jellyfin client library, with no UI code |
-| `src/storage/` | Settings file (`config.json`, mode 0600) |
-| `src/ui_core/` | UI logic without LVGL: key map, list cursor, text editing, formatting |
+| `src/storage/` | Settings file (`config.json`, mode 0600) and the poster cache |
+| `src/ui_core/` | UI logic without LVGL: key map, list and grid cursors, card text, request queue, text editing, formatting |
 | `src/app/` | The LVGL application: screens, widgets, platform code |
 | `spike/` | The playback spike (libmpv into an LVGL canvas) |
-| `tools/` | `jf_probe`: a live check of the client against a real server |
+| `tools/` | `jf_probe`: a live check of the client against a real server. `gen-demo-posters.sh` makes the demo posters (needs ffmpeg) |
 | `tests/` | Unit tests (doctest, run with CTest) |
 
 ## License

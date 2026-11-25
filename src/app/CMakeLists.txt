@@ -8,11 +8,16 @@ set(ZEROFIN_APP_SOURCES
   screens/open_item.cpp
   screens/player_screen.cpp
   screens/setup_connect.cpp
+  ui/assets.cpp
   ui/async.cpp
+  ui/background.cpp
   ui/context.cpp
   ui/fonts.cpp
+  ui/image_loader.cpp
   ui/player_overlay.cpp
+  ui/poster_widgets.cpp
   ui/screen.cpp
+  ui/splash.cpp
   ui/widgets.cpp
   platform/platform_common.cpp
   platform/status_reader.cpp)

@@ -45,6 +45,8 @@ class Screen {
   void async(Work work, Done done) {
     ctx_.async->run(alive_, std::move(work), std::move(done));
   }
+  // A token that turns false when this screen is gone. Callbacks for other services check it.
+  Async::Alive alive() const { return alive_; }
   lv_timer_t* add_timer(uint32_t period_ms, std::function<void()> fn);
   void remove_timer(lv_timer_t* timer);
 

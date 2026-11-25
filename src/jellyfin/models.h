@@ -93,12 +93,20 @@ struct Item {
   std::string series_name;
   std::string season_id;
   std::string primary_image_tag;
+  std::string series_primary_image_tag;  // the series poster, sent with episodes and seasons
   int index_number = -1;         // episode number, or season number for seasons
   int parent_index_number = -1;  // season number for episodes
   int production_year = 0;
   int64_t runtime_ticks = 0;
   UserData user_data;
   std::vector<MediaSource> media_sources;
+};
+
+// An image on the server: the item that owns it and the tag that changes when the image changes.
+struct ImageRef {
+  std::string item_id;
+  std::string tag;
+  bool empty() const { return item_id.empty(); }
 };
 
 struct ItemList {
@@ -117,6 +125,11 @@ Result<QuickConnectSession> parse_quick_connect_session(std::string_view json);
 Result<bool> parse_quick_connect_authenticated(std::string_view json);
 Result<AuthResult> parse_auth_result(std::string_view json);
 Result<ItemList> parse_item_list(std::string_view json);
+// A reply that is a top-level array, such as /Items/Latest. total = the number of items.
+Result<ItemList> parse_item_array(std::string_view json);
+// The portrait poster of an item. An episode uses its series poster. A season uses its own poster, or the
+// series poster when it has none.
+ImageRef poster_ref(const Item& item);
 Result<PlaybackInfo> parse_playback_info(std::string_view json);
 
 }  // namespace zerofin::jf

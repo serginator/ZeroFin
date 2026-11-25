@@ -10,6 +10,8 @@
 #include "jellyfin/text.h"
 #include "jellyfin/url.h"
 
+#include "jellyfin/demo_posters.inc"
+
 namespace zerofin::jf {
 namespace {
 
@@ -181,6 +183,9 @@ json item_json(const DemoItem& it, bool with_sources) {
   j["UserData"] = {{"PlaybackPositionTicks", static_cast<int64_t>(runtime * it.progress)},
                    {"Played", it.played},
                    {"PlayCount", it.played ? 1 : 0}};
+  // Every movie and series has a poster except m5, which shows the placeholder. An episode uses its series.
+  if ((it.type == "Movie" || it.type == "Series") && it.id != "m5") j["ImageTags"] = {{"Primary", "demo"}};
+  if (it.type == "Episode" || it.type == "Season") j["SeriesPrimaryImageTag"] = "demo";
   if (playable && with_sources) {
     j["MediaSources"] = json::array({{{"Id", it.id + "-src"},
                                       {"Container", "mkv"},
@@ -211,6 +216,15 @@ const DemoItem* find_any(const std::string& id) {
     }
   }
   return nullptr;
+}
+
+// A baseline JPEG for the item id, or 404 for m5 and for an unknown id.
+HttpResponse poster_for(const std::string& id) {
+  if (id == "m5" || !find_any(id)) return HttpResponse{404, {}, {}};
+  unsigned sum = 0;
+  for (char c : id) sum += static_cast<unsigned char>(c);
+  const auto& p = kDemoPosters[sum % (sizeof(kDemoPosters) / sizeof(kDemoPosters[0]))];
+  return HttpResponse{200, std::string(reinterpret_cast<const char*>(p.data), p.size), {}};
 }
 
 HttpResponse ok(std::string body) { return HttpResponse{200, std::move(body), {}}; }
@@ -279,6 +293,26 @@ HttpResponse DemoHttpClient::send(const HttpRequest& req) {
     std::vector<json> v;
     for (const char* id : {"s2-se2-e4", "s3-se2-e5", "s5-se3-e1"}) v.push_back(item_json(*find_any(id), false));
     return ok(list_json(v, 0));
+  }
+  if (route == "GET /Items/Latest") {
+    // The newest items of a library: the last ones in the demo data first.
+    const std::string parent = get_query_param(req.url, "parentId").value_or("");
+    int limit = 16;
+    if (auto l = get_query_param(req.url, "limit")) limit = std::atoi(l->c_str());
+    std::vector<const DemoItem*> all;
+    for (const auto& m : d.movies) {
+      if (parent == m.library) all.push_back(&m);
+    }
+    for (const auto& s : d.series) {
+      if (parent == s.library) all.push_back(&s);
+    }
+    std::vector<json> v;
+    for (auto it = all.rbegin(); it != all.rend() && static_cast<int>(v.size()) < limit; ++it) v.push_back(item_json(**it, false));
+    return ok(json(v).dump());
+  }
+  if (req.method == "GET" && path.rfind("/Items/", 0) == 0 && path.size() > 21 &&
+      path.compare(path.size() - 15, 15, "/Images/Primary") == 0) {
+    return poster_for(path.substr(7, path.size() - 7 - 15));
   }
   if (route == "GET /Items") {
     if (auto ids = get_query_param(req.url, "ids")) {

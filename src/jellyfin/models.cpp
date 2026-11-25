@@ -99,6 +99,7 @@ Item parse_item(const json& j) {
   if (auto tags = j.find("ImageTags"); tags != j.end() && tags->is_object()) {
     item.primary_image_tag = str(*tags, "Primary");
   }
+  item.series_primary_image_tag = str(j, "SeriesPrimaryImageTag");
   if (auto ud = j.find("UserData"); ud != j.end() && ud->is_object()) {
     item.user_data.position_ticks = i64(*ud, "PlaybackPositionTicks");
     item.user_data.played = flag(*ud, "Played");
@@ -211,6 +212,27 @@ Result<ItemList> parse_item_list(std::string_view text) {
     list.total = std::max(static_cast<int>(i64(j, "TotalRecordCount")), held);
     return list;
   });
+}
+
+Result<ItemList> parse_item_array(std::string_view text) {
+  try {
+    const json j = json::parse(text);
+    if (!j.is_array()) return Error{ErrorKind::Parse, "expected a JSON array", 0};
+    ItemList list;
+    for (const auto& i : j) list.items.push_back(parse_item(i));
+    list.total = static_cast<int>(list.items.size());
+    return list;
+  } catch (const json::exception& e) {
+    return Error{ErrorKind::Parse, e.what(), 0};
+  }
+}
+
+ImageRef poster_ref(const Item& item) {
+  const bool series_poster = !item.series_id.empty() &&
+                             (item.type == ItemType::Episode ||
+                              (item.type == ItemType::Season && item.primary_image_tag.empty()));
+  if (series_poster) return ImageRef{item.series_id, item.series_primary_image_tag};
+  return ImageRef{item.id, item.primary_image_tag};
 }
 
 Result<PlaybackInfo> parse_playback_info(std::string_view text) {

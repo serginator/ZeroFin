@@ -21,8 +21,11 @@
 #include "script_runner.h"
 #include "storage/config_store.h"
 #include "ui/async.h"
+#include "ui/background.h"
 #include "ui/context.h"
+#include "ui/image_loader.h"
 #include "ui/screen.h"
+#include "ui/splash.h"
 #include "ui/widgets.h"
 
 #if ZEROFIN_HAS_LIBCURL
@@ -31,6 +34,8 @@
 
 namespace zerofin::app {
 namespace {
+
+constexpr uint32_t kSplashMs = 2000;
 
 std::atomic<bool> g_quit{false};
 
@@ -88,6 +93,8 @@ int run_app() {
 
   AppContext ctx;
   ctx.fonts = load_fonts();
+  Background background;
+  ctx.background = background.image();
 
   // Settings.
   storage::ConfigStore store(storage::default_config_dir());
@@ -113,11 +120,17 @@ int run_app() {
   const jf::PlaybackProfile profile = load_profile(store.dir());
 
   Async async;
+  Async image_async;  // posters have their own worker, so they never delay a request of the main worker
+  // The demo server uses a throwaway folder, so its fake posters never reach the real cache.
+  ImageLoader images(image_async, *http,
+                     storage::ImageCache(demo ? std::filesystem::temp_directory_path() / "zerofin-demo-images"
+                                              : storage::default_image_cache_dir()));
   Toast toast(lv_layer_top(), ctx.fonts);
   Navigator nav(screen);
   ctx.async = &async;
   ctx.nav = &nav;
   ctx.toast = &toast;
+  ctx.images = &images;
   ctx.client_factory = [&](const std::string& url) {
     auto c = std::make_shared<jf::Client>(*http, info, url);
     c->set_profile(profile);
@@ -159,13 +172,24 @@ int run_app() {
     script = std::make_unique<ScriptRunner>(s, dir ? dir : ".");
   }
 
+  // The banner covers the first screen while it loads. A key closes it, and so does the time limit.
+  // A script run has no banner (the first key would only close it), unless ZEROFIN_SPLASH is set.
+  std::unique_ptr<Splash> splash;
+  if (!script || env_set("ZEROFIN_SPLASH")) splash = Splash::create(lv_layer_top());
+  const uint32_t splash_end = platform::tick_ms() + kSplashMs;
+
   std::vector<ui::KeyEvent> keys;
   while (!g_quit) {
     keys.clear();
     if (!plat->poll(keys)) break;
     if (script && !script->tick(platform::tick_ms(), async, *plat, keys)) break;
+    if (splash && (!keys.empty() || platform::tick_ms() - splash_end < 0x80000000u /* now is past the end, wrap-safe */)) {
+      splash.reset();
+      keys.clear();  // the key that closed the banner does nothing else
+    }
     for (const auto& k : keys) nav.handle_key(k);
     async.pump();
+    image_async.pump();
     nav.process_pending();
     lv_timer_handler();
     usleep(5000);

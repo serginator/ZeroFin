@@ -19,8 +19,14 @@ void Screen::attach(lv_obj_t* parent) {
   root_ = make_plain_obj(parent, 0, 0, kScreenW, kScreenH);
   lv_obj_set_style_bg_color(root_, lv_color_hex(color::kBackground), 0);
   lv_obj_set_style_bg_opa(root_, LV_OPA_COVER, 0);
-
   if (has_title_bar()) {
+    // The player has no title bar and keeps its own plain background for the video.
+    if (ctx_.background) {
+      lv_obj_t* bg = lv_image_create(root_);
+      lv_image_set_src(bg, ctx_.background);
+      lv_obj_set_pos(bg, 0, 0);
+      lv_obj_remove_flag(bg, LV_OBJ_FLAG_CLICKABLE);
+    }
     lv_obj_t* bar = make_plain_obj(root_, 0, 0, kScreenW, kTitleH);
     lv_obj_set_style_bg_color(bar, lv_color_hex(color::kBar), 0);
     lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);

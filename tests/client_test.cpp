@@ -450,11 +450,40 @@ TEST_CASE("logout clears the session on success only") {
   CHECK_FALSE(f.client.session().logged_in());
 }
 
-TEST_CASE("image_url and subtitle_url need no request") {
+TEST_CASE("image_request builds the poster request") {
   Fixture f;
-  CHECK(f.client.image_url("m1", "tagA", 160, 240) ==
-        "http://srv:8096/Items/m1/Images/Primary?maxWidth=160&maxHeight=240&quality=80&tag=tagA");
+  const HttpRequest r = f.client.image_request(ImageRef{"m1", "tagA"});
+  CHECK(r.method == "GET");
+  CHECK(FakeHttp::path_of(r.url) == "/Items/m1/Images/Primary");
+  CHECK(get_query_param(r.url, "maxWidth") == "64");
+  CHECK(get_query_param(r.url, "maxHeight") == "96");
+  CHECK(get_query_param(r.url, "format") == "Jpg");
+  CHECK(get_query_param(r.url, "tag") == "tagA");
+  // The token goes in the header only. A URL with a token ends up in proxy and server logs.
+  CHECK_FALSE(get_query_param(r.url, "api_key").has_value());
+  CHECK(header(r, "Authorization").find("tok") != std::string::npos);
+  CHECK(r.timeout_ms == 15000);
+  CHECK(f.http.requests.empty());
+  const HttpRequest bare = f.client.image_request(ImageRef{"m1", ""});
+  CHECK_FALSE(get_query_param(bare.url, "tag").has_value());
+}
+
+TEST_CASE("subtitle_url needs no request") {
+  Fixture f;
   CHECK(f.client.subtitle_url("m1", "ms1", 4, "ass") ==
         "http://srv:8096/Videos/m1/ms1/Subtitles/4/0/Stream.ass?api_key=tok");
   CHECK(f.http.requests.empty());
+}
+
+TEST_CASE("latest sends the library and parses an array") {
+  Fixture f;
+  f.http.on("GET /Items/Latest", 200, R"([{"Id":"m9","Name":"New","Type":"Movie"},{"Id":"s9","Name":"S","Type":"Series"}])");
+  auto r = f.client.latest("lib1", 8);
+  REQUIRE(r.ok());
+  CHECK(r.value().items.size() == 2);
+  CHECK(FakeHttp::path_of(f.http.last().url) == "/Items/Latest");
+  CHECK(get_query_param(f.http.last().url, "parentId") == "lib1");
+  CHECK(get_query_param(f.http.last().url, "limit") == "8");
+  CHECK(get_query_param(f.http.last().url, "groupItems") == "true");
+  CHECK(get_query_param(f.http.last().url, "userId") == "u1");
 }

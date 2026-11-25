@@ -21,6 +21,11 @@ constexpr uint32_t kSelected = 0x1D3B52;
 constexpr uint32_t kGood = 0x4CAF50;
 constexpr uint32_t kWarn = 0xFFB300;
 constexpr uint32_t kError = 0xEF5350;
+constexpr uint32_t kPlaceholder = 0x243241;  // a poster that has not arrived
+constexpr uint32_t kSelectedBorder = 0xFFFFFF;
+// Tile colours, picked by the tile position.
+constexpr uint32_t kTilePalette[] = {0x00A4DC, 0xE0752B, 0x6BBF3A, 0xB04FD0, 0xD9B21E, 0x2BB5A0};
+constexpr uint32_t kTileNeutral = 0x5C6B7A;  // Search and Settings
 }  // namespace color
 
 struct Fonts {

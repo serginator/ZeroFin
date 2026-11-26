@@ -31,6 +31,7 @@ struct PlayRequest {
   std::string item_id;
   const MediaSource* source = nullptr;  // chosen media source from the item
   PlayMode mode = PlayMode::Auto;
+  Target target = Target::Lcd;          // where the video is shown: picks the transcode size
   std::optional<int> audio_index;       // Jellyfin stream index, nullopt = default
   std::optional<int> subtitle_index;    // nullopt = subtitles off
   int64_t start_ticks = 0;

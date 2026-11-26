@@ -29,7 +29,19 @@ struct PlaybackProfile {
   int64_t transcode_audio_bitrate = 96'000;
   int transcode_audio_channels = 2;
   int transcode_segment_seconds = 3;
+  // Transcode numbers for a monitor on the HDMI port (see profile_for). Direct play limits do not change.
+  // Jellyfin gives 1080p only at 8 Mbps or more (it lowers the size below that), so keep the 1080p bitrate at 8 Mbps.
+  int64_t hdmi720_video_bitrate = 3'000'000;
+  int64_t hdmi1080_video_bitrate = 8'000'000;
+  int64_t hdmi_audio_bitrate = 128'000;
+  int hdmi_max_fps = 30;
 };
+
+// Where the video is shown. It picks the transcode size.
+enum class Target { Lcd, Hdmi720, Hdmi1080 };
+
+// The profile to use for a target. Lcd returns `base` as it is.
+PlaybackProfile profile_for(const PlaybackProfile& base, Target target);
 
 // Reads overrides from JSON. Missing keys keep the default. Unknown keys are ignored.
 Result<PlaybackProfile> playback_profile_from_json(std::string_view json);

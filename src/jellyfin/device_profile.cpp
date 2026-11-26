@@ -35,10 +35,26 @@ Result<PlaybackProfile> playback_profile_from_json(std::string_view text) {
     read(j, "transcode_audio_bitrate", p.transcode_audio_bitrate);
     read(j, "transcode_audio_channels", p.transcode_audio_channels);
     read(j, "transcode_segment_seconds", p.transcode_segment_seconds);
+    read(j, "hdmi720_video_bitrate", p.hdmi720_video_bitrate);
+    read(j, "hdmi1080_video_bitrate", p.hdmi1080_video_bitrate);
+    read(j, "hdmi_audio_bitrate", p.hdmi_audio_bitrate);
+    read(j, "hdmi_max_fps", p.hdmi_max_fps);
     return p;
   } catch (const json::exception& e) {
     return Error{ErrorKind::Parse, e.what(), 0};
   }
+}
+
+PlaybackProfile profile_for(const PlaybackProfile& base, Target target) {
+  if (target == Target::Lcd) return base;
+  PlaybackProfile p = base;
+  const bool full_hd = target == Target::Hdmi1080;
+  p.transcode_max_width = full_hd ? 1920 : 1280;
+  p.transcode_max_height = full_hd ? 1080 : 720;
+  p.transcode_max_fps = base.hdmi_max_fps;
+  p.transcode_video_bitrate = full_hd ? base.hdmi1080_video_bitrate : base.hdmi720_video_bitrate;
+  p.transcode_audio_bitrate = base.hdmi_audio_bitrate;
+  return p;
 }
 
 json build_device_profile(const PlaybackProfile& p, PlayMode mode) {

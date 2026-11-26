@@ -83,3 +83,57 @@ TEST_CASE("playback_profile_from_json rejects bad input") {
   CHECK(playback_profile_from_json("[]").error().kind == ErrorKind::Parse);
   CHECK(playback_profile_from_json("{").error().kind == ErrorKind::Parse);
 }
+
+TEST_CASE("profile_for(Lcd) is the base profile, unchanged") {
+  PlaybackProfile base;
+  base.transcode_video_bitrate = 900'000;
+  const PlaybackProfile p = profile_for(base, Target::Lcd);
+  CHECK(p.transcode_max_width == 320);
+  CHECK(p.transcode_max_height == 170);
+  CHECK(p.transcode_max_fps == 24);
+  CHECK(p.transcode_video_bitrate == 900'000);
+  CHECK(p.transcode_audio_bitrate == 96'000);
+}
+
+TEST_CASE("profile_for(Hdmi720) transcodes to 1280x720 at 3 Mbps") {
+  const PlaybackProfile p = profile_for(PlaybackProfile{}, Target::Hdmi720);
+  CHECK(p.transcode_max_width == 1280);
+  CHECK(p.transcode_max_height == 720);
+  CHECK(p.transcode_max_fps == 30);
+  CHECK(p.transcode_video_bitrate == 3'000'000);
+  CHECK(p.transcode_audio_bitrate == 128'000);
+}
+
+TEST_CASE("profile_for(Hdmi1080) transcodes to 1920x1080 at 8 Mbps") {
+  // Jellyfin returns 720p when a 1080p request has less than 8 Mbps.
+  const PlaybackProfile p = profile_for(PlaybackProfile{}, Target::Hdmi1080);
+  CHECK(p.transcode_max_width == 1920);
+  CHECK(p.transcode_max_height == 1080);
+  CHECK(p.transcode_video_bitrate == 8'000'000);
+  CHECK(p.transcode_audio_bitrate == 128'000);
+}
+
+TEST_CASE("HDMI targets keep the direct play limits (a 1080p file is always transcoded)") {
+  for (Target t : {Target::Lcd, Target::Hdmi720, Target::Hdmi1080}) {
+    const PlaybackProfile p = profile_for(PlaybackProfile{}, t);
+    CHECK(p.direct_max_width == 1280);
+    CHECK(p.direct_max_height == 720);
+    CHECK(p.direct_max_bitrate == 6'000'000);
+  }
+}
+
+TEST_CASE("profile.json can change the HDMI numbers") {
+  auto r = playback_profile_from_json(R"({"hdmi720_video_bitrate":4000000,"hdmi1080_video_bitrate":9000000,)"
+                                      R"("hdmi_max_fps":24,"hdmi_audio_bitrate":192000})");
+  REQUIRE(r.ok());
+  const PlaybackProfile a = profile_for(r.value(), Target::Hdmi720);
+  CHECK(a.transcode_video_bitrate == 4'000'000);
+  CHECK(a.transcode_max_fps == 24);
+  CHECK(a.transcode_audio_bitrate == 192'000);
+  CHECK(profile_for(r.value(), Target::Hdmi1080).transcode_video_bitrate == 9'000'000);
+}
+
+TEST_CASE("the device profile for HDMI 1080p allows 8.1 Mbps of streaming") {
+  const PlaybackProfile p = profile_for(PlaybackProfile{}, Target::Hdmi1080);
+  CHECK(build_device_profile(p, PlayMode::AlwaysTranscode)["MaxStreamingBitrate"] == 8'128'000);
+}

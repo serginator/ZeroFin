@@ -496,3 +496,40 @@ TEST_CASE("latest sends the library and parses an array") {
   CHECK(get_query_param(f.http.last().url, "groupItems") == "true");
   CHECK(get_query_param(f.http.last().url, "userId") == "u1");
 }
+
+TEST_CASE("an HDMI 1080p request transcodes to 1920x1080 at 8 Mbps") {
+  Fixture f;
+  f.http.on("POST /Items/m1/PlaybackInfo", 200, fixtures::playback_info_transcode_json());
+  const Item m = movie(8'100'000);
+  PlayRequest req;
+  req.item_id = "m1";
+  req.source = &m.media_sources[0];
+  req.target = Target::Hdmi1080;
+  auto plan = f.client.prepare_playback(req);
+  REQUIRE(plan.ok());
+
+  CHECK(plan.value().method == Method::Transcode);
+  const std::string url = plan.value().url;
+  CHECK(get_query_param(url, "maxWidth") == "1920");
+  CHECK(get_query_param(url, "maxHeight") == "1080");
+  CHECK(get_query_param(url, "VideoBitrate") == "8000000");
+  CHECK(get_query_param(url, "AudioBitrate") == "128000");
+  CHECK(get_query_param(url, "MaxFramerate") == "30");
+  CHECK(get_query_param(f.http.last().url, "maxStreamingBitrate") == "8128000");
+}
+
+TEST_CASE("an HDMI 720p request transcodes to 1280x720 at 3 Mbps") {
+  Fixture f;
+  f.http.on("POST /Items/m1/PlaybackInfo", 200, fixtures::playback_info_transcode_json());
+  const Item m = movie(8'100'000);
+  PlayRequest req;
+  req.item_id = "m1";
+  req.source = &m.media_sources[0];
+  req.target = Target::Hdmi720;
+  auto plan = f.client.prepare_playback(req);
+  REQUIRE(plan.ok());
+  CHECK(get_query_param(plan.value().url, "maxWidth") == "1280");
+  CHECK(get_query_param(plan.value().url, "maxHeight") == "720");
+  CHECK(get_query_param(plan.value().url, "VideoBitrate") == "3000000");
+  CHECK(get_query_param(f.http.last().url, "maxStreamingBitrate") == "3128000");
+}

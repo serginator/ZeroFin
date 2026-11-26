@@ -15,6 +15,9 @@ struct AppConfig {
   std::string user_name;
   std::string device_id;   // random, made on first run
   std::string play_mode = "auto";  // "auto" or "transcode"
+  std::string video_output = "auto";    // "auto" (HDMI when a monitor is connected) or "lcd"
+  std::string hdmi_quality = "720";     // "720" or "1080": the transcode size for a monitor
+  std::string hdmi_sound = "monitor";   // "monitor" or "speaker": where the sound goes with a monitor
 
   bool logged_in() const { return !server_url.empty() && !token.empty() && !user_id.empty(); }
 };

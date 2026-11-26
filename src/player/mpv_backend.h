@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include "player/backend.h"
 
 struct mpv_handle;
@@ -7,12 +9,12 @@ struct mpv_render_context;
 
 namespace zerofin::player {
 
-// Plays with libmpv and its software render API. The settings come from the spike
-// (spike-results.md): hardware decode with v4l2m2m-copy, and a scale filter so the RGB565
-// conversion only touches a small picture.
+// Plays with libmpv. On the LCD it uses the software render API and a scale filter, so the RGB565
+// conversion only touches a small picture (spike-results.md). With a monitor it lets mpv open its own
+// GPU output on the HDMI connector (hdmi-output spike 2), and the app draws nothing for the video.
 class MpvBackend : public PlayerBackend {
  public:
-  MpvBackend() = default;
+  explicit MpvBackend(BackendOptions options = {}) : options_(std::move(options)) {}
   ~MpvBackend() override;
   MpvBackend(const MpvBackend&) = delete;
   MpvBackend& operator=(const MpvBackend&) = delete;
@@ -23,6 +25,7 @@ class MpvBackend : public PlayerBackend {
   void set_paused(bool paused) override;
   void seek_relative(double seconds) override;
   void set_volume(int percent) override;
+  void set_audio_sink(AudioSink sink) override;
   void stop() override;
 
  private:
@@ -31,6 +34,7 @@ class MpvBackend : public PlayerBackend {
   void refresh_properties(uint32_t now_ms);
   void fail(const std::string& what);
 
+  const BackendOptions options_;
   mpv_handle* mpv_ = nullptr;
   mpv_render_context* render_ = nullptr;
   std::optional<std::string> subtitle_url_;

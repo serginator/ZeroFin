@@ -7,11 +7,12 @@
 
 namespace zerofin::player {
 
-std::unique_ptr<PlayerBackend> make_backend(bool demo) {
+std::unique_ptr<PlayerBackend> make_backend(bool demo, const BackendOptions& options) {
   if (demo) return std::make_unique<DemoBackend>();
 #if defined(ZEROFIN_HAS_MPV)
-  return std::make_unique<MpvBackend>();
+  return std::make_unique<MpvBackend>(options);
 #else
+  (void)options;
   return nullptr;
 #endif
 }

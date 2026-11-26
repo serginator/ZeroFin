@@ -27,6 +27,11 @@ void ControlsModel::set_neighbors(bool has_previous, bool has_next) {
   if (!icon_enabled(focus_)) focus_ = PlayerIcon::PlayPause;
 }
 
+void ControlsModel::set_pinned(bool pinned) {
+  pinned_ = pinned;
+  visible_ = false;
+}
+
 bool ControlsModel::icon_enabled(PlayerIcon icon) const {
   if (icon == PlayerIcon::Prev) return has_previous_;
   if (icon == PlayerIcon::Next) return has_next_;
@@ -96,7 +101,7 @@ PlayerAction ControlsModel::on_key(const KeyEvent& event, uint32_t now_ms) {
     return media_action(event.key);
   }
 
-  if (!visible_) {
+  if (!visible()) {
     if (event.key == Key::Esc) return PlayerAction::Exit;
     visible_ = true;
     focus_ = PlayerIcon::PlayPause;
@@ -107,6 +112,7 @@ PlayerAction ControlsModel::on_key(const KeyEvent& event, uint32_t now_ms) {
   last_key_ms_ = now_ms;
   switch (event.key) {
     case Key::Esc:
+      if (pinned_) return PlayerAction::Exit;
       visible_ = false;
       return PlayerAction::None;
     case Key::Left:
@@ -125,7 +131,7 @@ PlayerAction ControlsModel::on_key(const KeyEvent& event, uint32_t now_ms) {
 }
 
 bool ControlsModel::tick(uint32_t now_ms) {
-  if (!visible_) return false;
+  if (pinned_ || !visible_) return false;
   if (now_ms - last_key_ms_ >= kControlsHideMs) {
     visible_ = false;
     return true;

@@ -172,8 +172,9 @@ Result<PlaybackPlan> Client::prepare_playback(const PlayRequest& req) {
   if (!session_.logged_in()) return not_logged_in();
   if (!req.source || req.item_id.empty()) return Error{ErrorKind::Invalid, "no item or media source", 0};
   const MediaSource& source = *req.source;
+  const PlaybackProfile profile = profile_for(profile_, req.target);
 
-  const Decision decision = decide_playback(source, profile_, req.mode, req.subtitle_index);
+  const Decision decision = decide_playback(source, profile, req.mode, req.subtitle_index);
   const bool direct = decision.method == Method::DirectPlay;
   const PlayMode profile_mode = direct ? PlayMode::Auto : PlayMode::AlwaysTranscode;
 
@@ -193,11 +194,11 @@ Result<PlaybackPlan> Client::prepare_playback(const PlayRequest& req) {
                        {"enableTranscoding", direct ? "false" : "true"},
                        {"autoOpenLiveStream", "false"},
                        {"maxStreamingBitrate",
-                        std::to_string(direct ? profile_.direct_max_bitrate
-                                              : profile_.transcode_video_bitrate + profile_.transcode_audio_bitrate)}};
+                        std::to_string(direct ? profile.direct_max_bitrate
+                                              : profile.transcode_video_bitrate + profile.transcode_audio_bitrate)}};
   if (audio_index >= 0) query.push_back({"audioStreamIndex", std::to_string(audio_index)});
 
-  const json body = {{"DeviceProfile", build_device_profile(profile_, profile_mode)}};
+  const json body = {{"DeviceProfile", build_device_profile(profile, profile_mode)}};
   auto info = parse_reply<PlaybackInfo>(
       request("POST", "/Items/" + percent_encode(req.item_id) + "/PlaybackInfo", query, body.dump()),
       parse_playback_info);
@@ -229,11 +230,11 @@ Result<PlaybackPlan> Client::prepare_playback(const PlayRequest& req) {
       return Error{ErrorKind::Http, "the server gave no transcoding URL", 0};
     }
     std::string url = join_url(base_url_, chosen->transcoding_url);
-    url = set_query_param(url, "maxWidth", std::to_string(profile_.transcode_max_width));
-    url = set_query_param(url, "maxHeight", std::to_string(profile_.transcode_max_height));
-    url = set_query_param(url, "MaxFramerate", std::to_string(profile_.transcode_max_fps));
-    url = set_query_param(url, "VideoBitrate", std::to_string(profile_.transcode_video_bitrate));
-    url = set_query_param(url, "AudioBitrate", std::to_string(profile_.transcode_audio_bitrate));
+    url = set_query_param(url, "maxWidth", std::to_string(profile.transcode_max_width));
+    url = set_query_param(url, "maxHeight", std::to_string(profile.transcode_max_height));
+    url = set_query_param(url, "MaxFramerate", std::to_string(profile.transcode_max_fps));
+    url = set_query_param(url, "VideoBitrate", std::to_string(profile.transcode_video_bitrate));
+    url = set_query_param(url, "AudioBitrate", std::to_string(profile.transcode_audio_bitrate));
     url = set_query_param(url, "SubtitleStreamIndex", std::to_string(sent_subtitle));
     if (decision.burn_in_subtitle) url = set_query_param(url, "SubtitleMethod", "Encode");
     if (audio_index >= 0) url = set_query_param(url, "AudioStreamIndex", std::to_string(audio_index));

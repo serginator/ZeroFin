@@ -52,6 +52,9 @@ jf::Result<AppConfig> ConfigStore::load() const {
     c.device_id = str(j, "device_id");
     const std::string mode = str(j, "play_mode");
     c.play_mode = (mode == "transcode") ? "transcode" : "auto";
+    c.video_output = (str(j, "video_output") == "lcd") ? "lcd" : "auto";
+    c.hdmi_quality = (str(j, "hdmi_quality") == "1080") ? "1080" : "720";
+    c.hdmi_sound = (str(j, "hdmi_sound") == "speaker") ? "speaker" : "monitor";
     return c;
   } catch (const json::exception& e) {
     return Error{ErrorKind::Parse, e.what(), 0};
@@ -71,7 +74,10 @@ jf::Result<jf::Unit> ConfigStore::save(const AppConfig& c) const {
                   {"user_id", c.user_id},
                   {"user_name", c.user_name},
                   {"device_id", c.device_id},
-                  {"play_mode", c.play_mode == "transcode" ? "transcode" : "auto"}};
+                  {"play_mode", c.play_mode == "transcode" ? "transcode" : "auto"},
+                  {"video_output", c.video_output == "lcd" ? "lcd" : "auto"},
+                  {"hdmi_quality", c.hdmi_quality == "1080" ? "1080" : "720"},
+                  {"hdmi_sound", c.hdmi_sound == "speaker" ? "speaker" : "monitor"}};
   const std::string text = j.dump(2) + "\n";
 
   const std::filesystem::path tmp = dir_ / "config.json.tmp";

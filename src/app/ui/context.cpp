@@ -1,9 +1,36 @@
 #include "ui/context.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <string>
+
 #include "ui/screen.h"
 #include "ui/widgets.h"
 
 namespace zerofin::app {
+
+player::BackendOptions AppContext::output_plan() const {
+  std::string forced = std::getenv("ZEROFIN_OUTPUT") ? std::getenv("ZEROFIN_OUTPUT") : "";
+  std::transform(forced.begin(), forced.end(), forced.begin(), [](unsigned char ch) { return std::tolower(ch); });
+  std::optional<player::HdmiConnector> monitor = find_hdmi ? find_hdmi() : std::nullopt;
+  player::OutputSetting setting = player::output_setting_from_text(forced.empty() ? config.video_output : forced);
+  if (forced == "hdmi") {
+    setting = player::OutputSetting::Auto;
+    if (!monitor) monitor = player::HdmiConnector{"/dev/dri/card0", "HDMI-A-1"};
+  }
+  return player::plan_output(setting, monitor, monitor && player::monitor_has_audio(), config.hdmi_sound == "speaker");
+}
+
+bool AppContext::monitor_present() const {
+  const char* forced = std::getenv("ZEROFIN_OUTPUT");
+  if (forced && std::string(forced) == "hdmi") return true;
+  return find_hdmi && find_hdmi().has_value();
+}
+
+jf::Target AppContext::playback_target() const {
+  return player::target_for(output_plan().output, config.hdmi_quality);
+}
 
 bool AppContext::save_config() {
   if (!store) return true;

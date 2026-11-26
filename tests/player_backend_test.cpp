@@ -86,3 +86,14 @@ TEST_CASE("demo: ZEROFIN_DEMO_DURATION shortens the video") {
   d.start(params());
   CHECK(d.poll(0).duration_s == kDemoDurationSeconds);
 }
+
+TEST_CASE("factory: the demo backend ignores the output and the sound options") {
+  BackendOptions o;
+  o.output = Output::Hdmi;
+  o.audio = AudioSink::Hdmi;
+  auto b = make_backend(true, o);
+  REQUIRE(b != nullptr);
+  b->set_audio_sink(AudioSink::Default);  // must not crash
+  b->start(params());
+  CHECK(b->poll(0).started);  // it plays as usual: the options change nothing
+}

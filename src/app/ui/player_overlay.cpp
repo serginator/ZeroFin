@@ -58,12 +58,12 @@ PlayerOverlay::PlayerOverlay(lv_obj_t* parent, const Fonts& fonts) : fonts_(font
   lv_obj_t* band = make_box(controls_, 0, kBandY, kScreenW, kBandH, 0x000000, LV_OPA_70, 0);
   const int total_w = kIconCount * kCellW + (kIconCount - 1) * kCellGap;
   const int start_x = (kScreenW - total_w) / 2;
-  const char* texts[kIconCount] = {LV_SYMBOL_PREV, "-15", LV_SYMBOL_PAUSE, "+15", LV_SYMBOL_NEXT, "CC"};
+  const char* texts[kIconCount] = {LV_SYMBOL_PREV, "-15", LV_SYMBOL_PAUSE, "+15", LV_SYMBOL_NEXT, LV_SYMBOL_SETTINGS};
   for (int i = 0; i < kIconCount; ++i) {
     cells_[i] = make_plain_obj(band, start_x + i * (kCellW + kCellGap), 8, kCellW, kCellH);
     lv_obj_set_style_radius(cells_[i], 5, 0);
     labels_[i] = lv_label_create(cells_[i]);
-    const bool symbol = i == 0 || i == 2 || i == 4;
+    const bool symbol = i == 0 || i == 2 || i == 4 || i == 5;
     lv_obj_set_style_text_font(labels_[i], symbol ? &lv_font_montserrat_16 : fonts_.bold, 0);
     lv_label_set_text(labels_[i], texts[i]);
     lv_obj_center(labels_[i]);

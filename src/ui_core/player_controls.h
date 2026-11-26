@@ -43,7 +43,9 @@ class ControlsModel {
   // Hides the controls after kControlsHideMs without a key. True when it just hid them.
   bool tick(uint32_t now_ms);
 
-  bool visible() const { return visible_; }
+  // Pinned controls are always shown (the player has no video to look at). Esc then leaves the player.
+  void set_pinned(bool pinned);
+  bool visible() const { return pinned_ || visible_; }
   PlayerIcon focus() const { return focus_; }
   bool icon_enabled(PlayerIcon icon) const;
 
@@ -53,6 +55,7 @@ class ControlsModel {
   void move_focus(int direction);
 
   bool visible_ = false;
+  bool pinned_ = false;
   PlayerIcon focus_ = PlayerIcon::PlayPause;
   bool has_previous_ = false;
   bool has_next_ = false;

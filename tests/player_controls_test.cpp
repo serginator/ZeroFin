@@ -170,3 +170,32 @@ TEST_CASE("translate_player_key leaves other keys alone and keeps the repeat fla
   held.repeat = true;
   CHECK(translate_player_key(held).repeat);
 }
+
+TEST_CASE("pinned: the controls are visible and the first key acts at once") {
+  ControlsModel m;
+  m.set_pinned(true);
+  CHECK(m.visible());
+  CHECK(m.focus() == PlayerIcon::PlayPause);
+  CHECK(m.on_key(k(Key::Enter), 0) == PlayerAction::TogglePause);
+  CHECK(m.on_key(k(Key::Right), 10) == PlayerAction::None);
+  CHECK(m.focus() == PlayerIcon::SeekForward);
+  CHECK(m.on_key(k(Key::Enter), 20) == PlayerAction::SeekForward);
+  CHECK(m.on_key(k(Key::Tab), 30) == PlayerAction::OpenTracks);
+}
+
+TEST_CASE("pinned: the controls never hide and Esc leaves the player") {
+  ControlsModel m;
+  m.set_pinned(true);
+  CHECK_FALSE(m.tick(100000));
+  CHECK(m.visible());
+  CHECK(m.on_key(k(Key::Esc), 100001) == PlayerAction::Exit);
+  CHECK(m.visible());
+}
+
+TEST_CASE("pinned: unpinning hides the controls again") {
+  ControlsModel m;
+  m.set_pinned(true);
+  m.set_pinned(false);
+  CHECK_FALSE(m.visible());
+  CHECK(m.on_key(k(Key::Esc), 0) == PlayerAction::Exit);
+}

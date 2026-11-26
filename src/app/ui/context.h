@@ -8,6 +8,7 @@
 #include "jellyfin/client.h"
 #include "jellyfin/discovery.h"
 #include "player/backend.h"
+#include "player/output_plan.h"
 #include "player/system_volume.h"
 #include "storage/config_store.h"
 #include "ui/async.h"
@@ -37,7 +38,9 @@ struct AppContext {
   std::function<std::vector<jf::DiscoveredServer>()> discover;
 
   // Makes the player backend. Always set. The backend it returns is null when the build has no player.
-  std::function<std::unique_ptr<player::PlayerBackend>()> make_backend;
+  std::function<std::unique_ptr<player::PlayerBackend>(const player::BackendOptions&)> make_backend;
+  // The monitor on the HDMI port, if any. Null (the tests) means no monitor.
+  std::function<std::optional<player::HdmiConnector>()> find_hdmi;
   bool demo = false;  // ZEROFIN_DEMO: fake server, fake player, fake status values
   // Opens the device mixer. Null in the demo, so the demo never changes the real volume. The
   // mixer may be unavailable: the factory then returns nullptr.
@@ -46,6 +49,14 @@ struct AppContext {
 
   // Called when the user starts a title. Opens the player, or shows the plan when the build has no player.
   std::function<void(const jf::PlaybackPlan&, const jf::Item&)> start_playback;
+
+  // Where the next video goes: the LCD, or the monitor when one is connected (unless Settings says LCD only).
+  // ZEROFIN_OUTPUT=lcd|auto|hdmi overrides the setting. "hdmi" works with no monitor, for the simulator.
+  player::BackendOptions output_plan() const;
+  // True when a monitor is on the HDMI port (or ZEROFIN_OUTPUT=hdmi). Then the player menu offers the output choice.
+  bool monitor_present() const;
+  // The server profile for that output.
+  jf::Target playback_target() const;
 
   jf::PlayMode play_mode() const {
     return config.play_mode == "transcode" ? jf::PlayMode::AlwaysTranscode : jf::PlayMode::Auto;

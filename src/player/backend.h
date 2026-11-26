@@ -6,6 +6,8 @@
 #include <optional>
 #include <string>
 
+#include "player/hdmi.h"
+
 namespace zerofin::player {
 
 struct StartParams {
@@ -20,6 +22,16 @@ struct StartParams {
 };
 
 enum class EndReason { None, Eof, Error };
+
+// Where the sound goes. Default is the system default (the CP0 speaker). Hdmi is the monitor, through ALSA.
+enum class AudioSink { Default, Hdmi };
+
+// How a backend is built. Hdmi draws the video on the monitor by itself and never touches the LCD canvas.
+struct BackendOptions {
+  Output output = Output::Lcd;
+  HdmiConnector hdmi;  // used when output is Hdmi
+  AudioSink audio = AudioSink::Default;
+};
 
 struct PlayerState {
   bool started = false;  // the first frame was drawn
@@ -45,11 +57,13 @@ class PlayerBackend {
   virtual void set_paused(bool paused) = 0;
   virtual void seek_relative(double seconds) = 0;
   virtual void set_volume(int percent) = 0;
+  // Moves the sound to another device while the video plays. Only the monitor output uses it.
+  virtual void set_audio_sink(AudioSink sink) = 0;
   // Frees the decoder memory (CMA on the device).
   virtual void stop() = 0;
 };
 
 // The demo backend when `demo` is true, else the libmpv backend, else nullptr (a build without libmpv).
-std::unique_ptr<PlayerBackend> make_backend(bool demo);
+std::unique_ptr<PlayerBackend> make_backend(bool demo, const BackendOptions& options = {});
 
 }  // namespace zerofin::player

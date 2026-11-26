@@ -22,7 +22,9 @@ add_executable(zerofin_tests
   list_cursor_test.cpp
   menu_tabs_test.cpp
   models_test.cpp
+  output_plan_test.cpp
   output_watch_test.cpp
+  mpv_options_test.cpp
   player_backend_test.cpp
   player_controls_test.cpp
   player_timers_test.cpp

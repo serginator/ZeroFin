@@ -2,6 +2,8 @@ add_library(zerofin_player STATIC
   demo_backend.cpp
   factory.cpp
   hdmi.cpp
+  mpv_options.cpp
+  output_plan.cpp
   system_volume.cpp
   volume.cpp)
 target_include_directories(zerofin_player PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)

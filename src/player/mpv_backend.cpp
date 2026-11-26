@@ -4,9 +4,11 @@
 #include <mpv/render.h>
 
 #include <algorithm>
+#include <utility>
 #include <cstdio>
 
 #include "jellyfin/url.h"
+#include "player/mpv_options.h"
 
 namespace zerofin::player {
 namespace {
@@ -14,10 +16,6 @@ namespace {
 constexpr int kWidth = 320;
 constexpr int kHeight = 170;
 constexpr uint32_t kPropsIntervalMs = 250;
-
-// From spike-results.md. Scale the YUV frame first, so the RGB565 conversion is cheap.
-constexpr const char* kScaleFilter =
-    "scale=w=320:h=170:force_original_aspect_ratio=decrease:force_divisible_by=2:flags=fast_bilinear";
 
 }  // namespace
 
@@ -33,21 +31,9 @@ bool MpvBackend::create_handle() {
     fail("cannot create the player");
     return false;
   }
-  const char* const options[][2] = {
-      {"vo", "libmpv"},
-      {"config", "no"},
-      {"terminal", "no"},
-      {"load-scripts", "no"},
-      {"ytdl", "no"},
-      {"input-default-bindings", "no"},
-      {"demuxer-max-bytes", "16MiB"},
-      {"demuxer-max-back-bytes", "1MiB"},
-      {"vf", kScaleFilter},
-      {"idle", "yes"},  // keep the core after the end of a file, so it never sends SHUTDOWN
-  };
-  for (const auto& kv : options) {
-    const int rc = mpv_set_option_string(mpv_, kv[0], kv[1]);
-    if (rc < 0) std::fprintf(stderr, "player: option %s rejected: %s\n", kv[0], mpv_error_string(rc));
+  for (const auto& kv : mpv_options(options_)) {
+    const int rc = mpv_set_option_string(mpv_, kv.first.c_str(), kv.second.c_str());
+    if (rc < 0) std::fprintf(stderr, "player: option %s rejected: %s\n", kv.first.c_str(), mpv_error_string(rc));
   }
   if (mpv_initialize(mpv_) < 0) {
     fail("cannot start the player");
@@ -56,6 +42,9 @@ bool MpvBackend::create_handle() {
     return false;
   }
   mpv_request_log_messages(mpv_, "warn");
+
+  // On a monitor mpv draws by itself. There is no render context and no frame to copy.
+  if (options_.output == Output::Hdmi) return true;
 
   mpv_render_param ctx_params[] = {
       {MPV_RENDER_PARAM_API_TYPE, const_cast<char*>(MPV_RENDER_API_TYPE_SW)},
@@ -110,6 +99,10 @@ void MpvBackend::drain_events() {
         std::fprintf(stderr, "[mpv/%s] %s: %s", m->level, m->prefix, jf::redact_text(m->text).c_str());
         break;
       }
+      case MPV_EVENT_PLAYBACK_RESTART:
+        // The first picture is on the screen. On the LCD, render() says so. On a monitor nothing renders here.
+        if (options_.output == Output::Hdmi) state_.started = true;
+        break;
       case MPV_EVENT_FILE_LOADED:
         if (subtitle_url_) {
           const char* cmd[] = {"sub-add", subtitle_url_->c_str(), "select", nullptr};
@@ -201,6 +194,11 @@ void MpvBackend::seek_relative(double seconds) {
 void MpvBackend::set_volume(int percent) {
   if (!mpv_) return;
   mpv_set_property_string(mpv_, "volume", std::to_string(std::clamp(percent, 0, 100)).c_str());
+}
+
+void MpvBackend::set_audio_sink(AudioSink sink) {
+  if (options_.output != Output::Hdmi || !mpv_) return;
+  mpv_set_property_string(mpv_, "audio-device", audio_device_name(sink).c_str());
 }
 
 void MpvBackend::stop() {

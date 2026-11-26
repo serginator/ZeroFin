@@ -17,6 +17,7 @@ class DemoBackend : public PlayerBackend {
   void set_paused(bool paused) override { paused_ = paused; }
   void seek_relative(double seconds) override;
   void set_volume(int) override {}
+  void set_audio_sink(AudioSink) override {}
   void stop() override { running_ = false; }
 
  private:

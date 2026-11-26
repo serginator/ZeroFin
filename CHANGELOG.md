@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/serginator/ZeroFin/compare/v0.3.0...v0.3.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* set the device volume instead of the player volume ([94af277](https://github.com/serginator/ZeroFin/commit/94af2770f2ab77d626bba7c514f6f1cf8230f03c))
+
 ## [0.3.0](https://github.com/serginator/ZeroFin/compare/v0.2.0...v0.3.0) (2026-11-26)
 
 

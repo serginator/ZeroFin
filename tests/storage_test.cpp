@@ -36,6 +36,9 @@ AppConfig sample() {
   c.user_name = "admin";
   c.device_id = "dev1";
   c.play_mode = "transcode";
+  c.video_output = "lcd";
+  c.hdmi_quality = "1080";
+  c.hdmi_sound = "speaker";
   return c;
 }
 
@@ -47,6 +50,9 @@ TEST_CASE("a missing config file gives defaults") {
   REQUIRE(r.ok());
   CHECK_FALSE(r.value().logged_in());
   CHECK(r.value().play_mode == "auto");
+  CHECK(r.value().video_output == "auto");
+  CHECK(r.value().hdmi_quality == "720");
+  CHECK(r.value().hdmi_sound == "monitor");
   CHECK(r.value().token.empty());
 }
 
@@ -63,6 +69,9 @@ TEST_CASE("save then load returns the same values") {
   CHECK(r.value().user_name == "admin");
   CHECK(r.value().device_id == "dev1");
   CHECK(r.value().play_mode == "transcode");
+  CHECK(r.value().video_output == "lcd");
+  CHECK(r.value().hdmi_quality == "1080");
+  CHECK(r.value().hdmi_sound == "speaker");
   CHECK(r.value().logged_in());
 }
 
@@ -135,4 +144,27 @@ TEST_CASE("default_config_dir follows ZEROFIN_HOME, then HOME") {
 
   if (old_zero) ::setenv("ZEROFIN_HOME", saved_zero.c_str(), 1);
   if (old_home) ::setenv("HOME", saved_home.c_str(), 1);
+}
+
+TEST_CASE("bad video output, quality and sound values become the defaults") {
+  TempDir dir;
+  std::filesystem::create_directories(dir.path);
+  std::ofstream(dir.path / "config.json")
+      << R"({"token":"t","user_id":"u","server_url":"http://h","video_output":"vga","hdmi_quality":"4k","hdmi_sound":"loud"})";
+  auto r = ConfigStore(dir.path).load();
+  REQUIRE(r.ok());
+  CHECK(r.value().video_output == "auto");
+  CHECK(r.value().hdmi_quality == "720");
+  CHECK(r.value().hdmi_sound == "monitor");
+}
+
+TEST_CASE("an old config file with none of the new keys loads with the defaults") {
+  TempDir dir;
+  std::filesystem::create_directories(dir.path);
+  std::ofstream(dir.path / "config.json") << R"({"token":"t","user_id":"u","server_url":"http://h","play_mode":"transcode"})";
+  auto r = ConfigStore(dir.path).load();
+  REQUIRE(r.ok());
+  CHECK(r.value().play_mode == "transcode");
+  CHECK(r.value().video_output == "auto");
+  CHECK(r.value().hdmi_quality == "720");
 }

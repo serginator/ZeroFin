@@ -84,6 +84,7 @@ class Navigator {
   // Sends the key to the top screen. An unused Esc pops when there is a screen below.
   bool handle_key(const ui::KeyEvent& event);
   void process_pending();
+  size_t depth() const { return stack_.size(); }
 
  private:
   struct Op {

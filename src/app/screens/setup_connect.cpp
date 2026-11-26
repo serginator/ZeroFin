@@ -162,11 +162,13 @@ class ConnectScreen : public Screen {
     lv_obj_set_style_text_align(code_, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_text(code_, "...");
     info_ = make_label(root_, ctx_.fonts.small, color::kDim, 8, 124, 304);
-    lv_obj_t* hint = make_label(root_, ctx_.fonts.small, color::kDim, 8, 148, 304);
-    lv_label_set_text(hint, "Tab: use a password   Enter: new code   Esc: back");
+    hint_ = make_label(root_, ctx_.fonts.small, color::kDim, 8, 148, 304);
+    lv_label_set_text(hint_, kHintBack);
   }
 
   void on_show() override {
+    // The first screen after "Log out" has nothing below it. Esc then opens the server list.
+    lv_label_set_text(hint_, ctx_.nav->depth() > 1 ? kHintBack : kHintServer);
     if (!started_) {
       started_ = true;
       start();
@@ -182,10 +184,17 @@ class ConnectScreen : public Screen {
       start();
       return true;
     }
+    if (e.key == ui::Key::Esc && !e.repeat && ctx_.nav->depth() <= 1) {
+      go_setup(ctx_);  // keeps the saved server until another one is chosen
+      return true;
+    }
     return false;
   }
 
  private:
+  static constexpr const char* kHintBack = "Tab: password   Enter: new code   Esc: back";
+  static constexpr const char* kHintServer = "Tab: password   Enter: new code   Esc: server";
+
   void say(const std::string& text, uint32_t c = color::kDim) {
     lv_label_set_text(info_, text.c_str());
     lv_obj_set_style_text_color(info_, lv_color_hex(c), 0);
@@ -250,6 +259,7 @@ class ConnectScreen : public Screen {
 
   lv_obj_t* code_ = nullptr;
   lv_obj_t* info_ = nullptr;
+  lv_obj_t* hint_ = nullptr;
   lv_timer_t* timer_ = nullptr;
   std::string secret_;
   bool started_ = false;

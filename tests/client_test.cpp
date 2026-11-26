@@ -79,6 +79,15 @@ TEST_CASE("public_info sends the client header and no token") {
   CHECK(auth.find("Token=") == std::string::npos);
 }
 
+TEST_CASE("public_info can use a short timeout, for trying several addresses") {
+  Fixture f;
+  f.http.on("GET /System/Info/Public", 200, R"({"Id":"abc","ServerName":"jellyPi","Version":"12.4.0"})");
+  CHECK(f.client.public_info().ok());
+  CHECK(f.http.last().timeout_ms == 10000);
+  CHECK(f.client.public_info(3000).ok());
+  CHECK(f.http.last().timeout_ms == 3000);
+}
+
 TEST_CASE("Quick Connect flow ends with a session that sends the token") {
   FakeHttp http;
   Client client(http, test_info(), "http://srv:8096");

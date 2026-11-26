@@ -104,38 +104,58 @@ class SetupScreen : public Screen {
     TextInputSpec spec;
     spec.title = "Server address";
     spec.prompt = "Address of your Jellyfin server";
-    spec.initial = "http://";
-    spec.placeholder = "192.168.1.10:8096";
+    spec.placeholder = "IP or name. Port and http:// are optional";
     spec.on_submit = [this](const std::string& text) {
-      auto url = jf::normalize_server_url(text);
-      if (!url) {
+      auto urls = jf::server_url_candidates(text);
+      if (urls.empty()) {
         ctx_.toast->show("That address is not valid", Toast::Kind::Error);
         return false;
       }
-      check_server(*url);
+      check_server(std::move(urls));
       return true;
     };
     ctx_.nav->push(make_text_input_screen(ctx_, std::move(spec)));
   }
 
-  // Asks the server before the address is saved, so a mistyped address does not replace the
-  // working server (and its login).
-  void check_server(const std::string& url) {
-    auto client = ctx_.client_factory ? ctx_.client_factory(url) : nullptr;
+  // Asks the addresses one after the other and saves the first one that answers. Nothing is saved
+  // before an answer, so a mistyped address does not replace the working server (and its login).
+  void check_server(std::vector<std::string> urls) {
+    if (checking_) return;
+    checking_ = true;
+    try_server(std::make_shared<const std::vector<std::string>>(std::move(urls)), 0, std::nullopt);
+  }
+
+  void try_server(std::shared_ptr<const std::vector<std::string>> urls, size_t i, std::optional<jf::Error> first_error) {
+    auto client = ctx_.client_factory ? ctx_.client_factory((*urls)[i]) : nullptr;
     if (!client) {
+      checking_ = false;
+      set_status("");
       ctx_.toast->show("Cannot connect to a server", Toast::Kind::Error, 3500);
       return;
     }
-    set_status("Checking...");
-    async([client] { return client->public_info(); }, [this, url](jf::Result<jf::ServerInfo> r) {
-      set_status("");
-      if (!r) {
-        ctx_.toast->show(error_text(r.error()), Toast::Kind::Error, 3500);
-        return;
-      }
-      ctx_.use_server(url, r.value().name);
-      ctx_.nav->push(make_connect_screen(ctx_));
-    });
+    const bool several = urls->size() > 1;
+    set_status(several ? "Trying " + std::to_string(i + 1) + "/" + std::to_string(urls->size()) + "..." : "Checking...");
+    // A short wait per address when there are several, so a wrong one does not hold the others back.
+    const int timeout_ms = several ? kProbeTimeoutMs : 0;
+    async([client, timeout_ms] { return client->public_info(timeout_ms); },
+          [this, urls, i, first_error](jf::Result<jf::ServerInfo> r) mutable {
+            if (r) {
+              checking_ = false;
+              set_status("");
+              ctx_.use_server((*urls)[i], r.value().name);
+              ctx_.nav->push(make_connect_screen(ctx_));
+              return;
+            }
+            if (!first_error) first_error = r.error();
+            if (i + 1 < urls->size()) {
+              try_server(urls, i + 1, std::move(first_error));
+              return;
+            }
+            checking_ = false;
+            set_status("");
+            ctx_.toast->show(urls->size() > 1 ? "No Jellyfin server answered at that address" : error_text(*first_error),
+                             Toast::Kind::Error, 3500);
+          });
   }
 
   std::unique_ptr<ListView> list_;
@@ -143,6 +163,8 @@ class SetupScreen : public Screen {
   std::vector<std::function<void()>> actions_;
   bool searching_ = false;
   bool scanned_ = false;
+  bool checking_ = false;  // addresses are being tried
+  static constexpr int kProbeTimeoutMs = 3500;
 };
 
 // -------------------------------------------------------------- Quick Connect

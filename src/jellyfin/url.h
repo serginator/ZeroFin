@@ -37,4 +37,12 @@ std::string redact_text(std::string_view text);
 // Removes spaces at both ends and trailing slashes. Returns nullopt for unusable input.
 std::optional<std::string> normalize_server_url(std::string_view input);
 
+// The addresses to try for what the user typed, most likely first. Empty for unusable input.
+// - With a scheme and a port ("https://h:8920"): only that address.
+// - With a scheme and no port: that address, then the same one on Jellyfin's port 8096.
+// - With a port and no scheme ("h:8096"): http, then https.
+// - A bare host ("192.168.1.5"): on a local network (an IPv4 address, a name without a dot or ending in
+//   ".local") http://h:8096, http://h, https://h:8096, https://h. For other names https comes first.
+std::vector<std::string> server_url_candidates(std::string_view input);
+
 }  // namespace zerofin::jf

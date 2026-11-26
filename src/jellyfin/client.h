@@ -70,7 +70,8 @@ class Client {
   void set_profile(PlaybackProfile profile) { profile_ = profile; }
 
   // Server and login.
-  Result<ServerInfo> public_info();
+  // `timeout_ms` <= 0 keeps the default. A short one is for trying several addresses in a row.
+  Result<ServerInfo> public_info(int timeout_ms = 0);
   Result<QuickConnectSession> quick_connect_initiate();
   Result<bool> quick_connect_authorized(const std::string& secret);
   Result<AuthResult> login_quick_connect(const std::string& secret);  // also sets the session
@@ -104,7 +105,7 @@ class Client {
 
  private:
   Result<std::string> request(const std::string& method, const std::string& path, const QueryParams& query = {},
-                              const std::string& body = {});
+                              const std::string& body = {}, int timeout_ms = 0);
   Result<AuthResult> login(const std::string& path, const std::string& body);  // also sets the session
   Result<ItemList> list_request(const std::string& path, const QueryParams& query);
   Result<Unit> report(const char* path, const ProgressReport& report, bool with_pause);

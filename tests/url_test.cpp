@@ -63,6 +63,51 @@ TEST_CASE("normalize_server_url rejects unusable input") {
   CHECK(normalize_server_url("a b") == std::nullopt);
 }
 
+TEST_CASE("a bare IP address is tried on port 8096 and 80, with http then https") {
+  using V = std::vector<std::string>;
+  CHECK(server_url_candidates("192.168.1.157") ==
+        V{"http://192.168.1.157:8096", "http://192.168.1.157", "https://192.168.1.157:8096", "https://192.168.1.157"});
+  CHECK(server_url_candidates("  192.168.1.157/ ") == server_url_candidates("192.168.1.157"));
+}
+
+TEST_CASE("an address with a port and no scheme is tried with http then https") {
+  using V = std::vector<std::string>;
+  CHECK(server_url_candidates("192.168.1.157:8096") == V{"http://192.168.1.157:8096", "https://192.168.1.157:8096"});
+  CHECK(server_url_candidates("jellypi.local:8920") == V{"http://jellypi.local:8920", "https://jellypi.local:8920"});
+}
+
+TEST_CASE("an address with a scheme keeps the scheme") {
+  using V = std::vector<std::string>;
+  CHECK(server_url_candidates("https://192.168.1.157:8920") == V{"https://192.168.1.157:8920"});
+  CHECK(server_url_candidates("http://192.168.1.157:8096/") == V{"http://192.168.1.157:8096"});
+  // No port: the typed address first, then Jellyfin's port.
+  CHECK(server_url_candidates("http://192.168.1.157") == V{"http://192.168.1.157", "http://192.168.1.157:8096"});
+  CHECK(server_url_candidates("https://media.example.com/jf") ==
+        V{"https://media.example.com/jf", "https://media.example.com:8096/jf"});
+}
+
+TEST_CASE("a public host name tries https first, a local name tries Jellyfin's port first") {
+  using V = std::vector<std::string>;
+  CHECK(server_url_candidates("media.example.com") ==
+        V{"https://media.example.com", "http://media.example.com", "http://media.example.com:8096",
+          "https://media.example.com:8096"});
+  CHECK(server_url_candidates("jellypi")[0] == "http://jellypi:8096");
+  CHECK(server_url_candidates("jellypi.local")[0] == "http://jellypi.local:8096");
+  CHECK(server_url_candidates("MyHost.Home")[0] == "http://MyHost.Home:8096");
+}
+
+TEST_CASE("server_url_candidates rejects unusable input") {
+  CHECK(server_url_candidates("").empty());
+  CHECK(server_url_candidates("   ").empty());
+  CHECK(server_url_candidates("http://").empty());
+  CHECK(server_url_candidates("ftp://host").empty());
+  CHECK(server_url_candidates("a b").empty());
+  CHECK(server_url_candidates("host:abc").empty());
+  CHECK(server_url_candidates("host:0").empty());
+  CHECK(server_url_candidates("host:70000").empty());
+  CHECK(server_url_candidates(":8096").empty());
+}
+
 TEST_CASE("redact_text hides secrets inside free text") {
   using zerofin::jf::redact_text;
   CHECK(redact_text("Opening http://h/v?api_key=SECRET123&x=1 now") == "Opening http://h/v?api_key=***&x=1 now");

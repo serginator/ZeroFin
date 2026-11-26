@@ -208,4 +208,92 @@ std::optional<std::string> normalize_server_url(std::string_view input) {
   return url;
 }
 
+namespace {
+
+constexpr const char* kJellyfinPort = "8096";
+
+// "host" and "port" of an address after the scheme ("h:8096/jf" gives h, 8096). The port is empty when absent.
+struct Authority {
+  std::string host;
+  std::string port;
+  std::string path;  // starts with '/', or empty
+};
+
+bool is_ipv4(const std::string& host) {
+  if (host.empty()) return false;
+  return std::all_of(host.begin(), host.end(), [](unsigned char c) { return std::isdigit(c) || c == '.'; });
+}
+
+bool is_local_name(const std::string& host) {
+  if (host.front() == '[' || is_ipv4(host)) return true;
+  const std::string h = to_lower(host);
+  if (h.find('.') == std::string::npos) return true;
+  const auto ends = [&](const char* suffix) {
+    const std::string s(suffix);
+    return h.size() > s.size() && h.compare(h.size() - s.size(), s.size(), s) == 0;
+  };
+  return ends(".local") || ends(".lan") || ends(".home") || ends(".internal");
+}
+
+std::optional<Authority> split_authority(const std::string& rest) {
+  Authority a;
+  const auto slash = rest.find('/');
+  std::string authority = rest.substr(0, slash);
+  if (slash != std::string::npos) a.path = rest.substr(slash);
+  if (authority.empty()) return std::nullopt;
+  std::string port;
+  const auto colon = authority.rfind(':');
+  const auto bracket = authority.rfind(']');
+  if (colon != std::string::npos && (bracket == std::string::npos || colon > bracket)) {
+    port = authority.substr(colon + 1);
+    authority.resize(colon);
+    const bool digits = !port.empty() && port.size() <= 5 &&
+                        std::all_of(port.begin(), port.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+    if (!digits || std::stoi(port) < 1 || std::stoi(port) > 65535) return std::nullopt;
+  }
+  if (authority.empty()) return std::nullopt;
+  a.host = authority;
+  a.port = port;
+  return a;
+}
+
+}  // namespace
+
+std::vector<std::string> server_url_candidates(std::string_view input) {
+  const auto normalized = normalize_server_url(input);  // trims, checks the scheme, adds http:// when it is missing
+  if (!normalized) return {};
+  while (!input.empty() && std::isspace(static_cast<unsigned char>(input.front()))) input.remove_prefix(1);
+  const bool typed_scheme = input.find("://") != std::string_view::npos;
+  const std::string scheme = normalized->substr(0, normalized->find("://"));
+  const auto a = split_authority(normalized->substr(normalized->find("://") + 3));
+  if (!a) return {};
+
+  const auto make = [&](const char* s, const std::string& port) {
+    return std::string(s) + "://" + a->host + (port.empty() ? "" : ":" + port) + a->path;
+  };
+  std::vector<std::string> out;
+  const auto add = [&](std::string url) {
+    if (std::find(out.begin(), out.end(), url) == out.end()) out.push_back(std::move(url));
+  };
+
+  if (typed_scheme) {
+    add(make(scheme.c_str(), a->port));
+    if (a->port.empty()) add(make(scheme.c_str(), kJellyfinPort));
+  } else if (!a->port.empty()) {
+    add(make("http", a->port));
+    add(make("https", a->port));
+  } else if (is_local_name(a->host)) {
+    add(make("http", kJellyfinPort));
+    add(make("http", ""));
+    add(make("https", kJellyfinPort));
+    add(make("https", ""));
+  } else {
+    add(make("https", ""));
+    add(make("http", ""));
+    add(make("http", kJellyfinPort));
+    add(make("https", kJellyfinPort));
+  }
+  return out;
+}
+
 }  // namespace zerofin::jf

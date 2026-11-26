@@ -56,6 +56,18 @@ player only. Screens with a text field (address, search, password) type the lett
 | Tab | audio and subtitle menu (when the controls are shown) |
 | Esc | hide the controls, then leave the player |
 
+## Server address
+
+The address field starts empty. Type the address as you know it: an IP, a name, with or without `http://` and a port.
+ZeroFin asks the likely addresses one after the other (3.5 s each) and keeps the first one that answers:
+
+| You type | ZeroFin tries |
+|---|---|
+| `192.168.1.5` | `http://192.168.1.5:8096`, `http://192.168.1.5`, `https://192.168.1.5:8096`, `https://192.168.1.5` |
+| `jellyfin.example.com` | `https://`, `http://`, then the same with `:8096` |
+| `192.168.1.5:8096` | `http://` then `https://` |
+| `https://jf.example.com` | that address, then the same on `:8096` |
+
 ## Typing symbols
 
 All 95 printable ASCII characters can be typed in the address, search and password fields. Letters and digits work

@@ -35,9 +35,10 @@ std::string Client::url_for(const std::string& path, const QueryParams& query) c
 }
 
 Result<std::string> Client::request(const std::string& method, const std::string& path, const QueryParams& query,
-                                    const std::string& body) {
+                                    const std::string& body, int timeout_ms) {
   HttpRequest req;
   req.method = method;
+  if (timeout_ms > 0) req.timeout_ms = timeout_ms;
   req.url = url_for(path, query);
   req.headers.push_back({"Authorization", authorization_header_value(info_, session_.token)});
   req.headers.push_back({"Accept", "application/json"});
@@ -56,8 +57,8 @@ Result<std::string> Client::request(const std::string& method, const std::string
 
 // ---- server and login ----
 
-Result<ServerInfo> Client::public_info() {
-  return parse_reply<ServerInfo>(request("GET", "/System/Info/Public"), parse_server_info);
+Result<ServerInfo> Client::public_info(int timeout_ms) {
+  return parse_reply<ServerInfo>(request("GET", "/System/Info/Public", {}, {}, timeout_ms), parse_server_info);
 }
 
 Result<QuickConnectSession> Client::quick_connect_initiate() {

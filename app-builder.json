@@ -6,7 +6,7 @@
   "description": "Video client for Jellyfin servers on the Cardputer Zero. Not an official Jellyfin app.",
   "store": {
     "summary": "Browse and play video from your Jellyfin server on the Cardputer Zero.",
-    "description": "ZeroFin is a non-official Jellyfin client made for the 320x170 screen and the 46-key keyboard.\n\nSign in with Quick Connect, a password, or a server address. Browse movies, series and collections with posters. Continue what you started and see the next episode. Search your libraries. Play video with hardware decode, choose audio and subtitle tracks, and jump to the next episode.\n\nZeroFin needs a Jellyfin server on your network. It does not store or share your media. Jellyfin is a trademark of its owners. ZeroFin is not made or endorsed by the Jellyfin project.",
+    "description": "ZeroFin is a non-official Jellyfin client made for the 320x170 screen and the 46-key keyboard.\n\nSign in with Quick Connect, a password, or a server address. Browse movies, series and collections with posters. Continue what you started and see the next episode. Search your libraries. Play video on the small screen, choose audio and subtitle tracks, and jump to the next episode.\n\nZeroFin needs a Jellyfin server on your network. It does not store or share your media. Jellyfin is a trademark of its owners. ZeroFin is not made or endorsed by the Jellyfin project.",
     "categories": [
       "Media"
     ],
@@ -15,7 +15,8 @@
       "screenshots/library.png",
       "screenshots/detail.png",
       "screenshots/player.png",
-      "screenshots/search.png"
+      "screenshots/search.png",
+      "screenshots/series.png"
     ],
     "icon": "assets/images/zerofin-256.png",
     "license": "MIT",

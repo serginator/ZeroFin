@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/serginator/ZeroFin/compare/v0.3.1...v1.0.0) (2026-11-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* play on a monitor when HDMI is connected ([#6](https://github.com/serginator/ZeroFin/issues/6))
+
+### Features
+
+* play on a monitor when HDMI is connected ([#6](https://github.com/serginator/ZeroFin/issues/6)) ([5de9ef7](https://github.com/serginator/ZeroFin/commit/5de9ef706a7703c027fd92ed5feb3f71d79c80b5))
+
 ## [0.3.1](https://github.com/serginator/ZeroFin/compare/v0.3.0...v0.3.1) (2026-11-26)
 
 

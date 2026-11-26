@@ -188,17 +188,19 @@ class DetailScreen : public Screen {
     const jf::MediaSource source = item_.media_sources[0];
     auto client = ctx_.client;
     const auto mode = ctx_.play_mode();
+    const auto target = ctx_.playback_target();
     std::optional<int> audio;
     if (!audio_ids_.empty()) audio = audio_ids_[audio_sel_];
     std::optional<int> sub;
     if (sub_ids_[sub_sel_] >= 0) sub = sub_ids_[sub_sel_];
     const int64_t start_ticks = resume ? resume_ticks_ : 0;
     async(
-        [id, source, client, mode, audio, sub, start_ticks] {
+        [id, source, client, mode, target, audio, sub, start_ticks] {
           jf::PlayRequest req;
           req.item_id = id;
           req.source = &source;
           req.mode = mode;
+          req.target = target;
           req.audio_index = audio;
           req.subtitle_index = sub;
           req.start_ticks = start_ticks;
@@ -279,6 +281,22 @@ class SettingsScreen : public Screen {
     header("Playback");
     item("Always transcode", ctx_.config.play_mode == "transcode" ? "On" : "Off", false, [this] {
       ctx_.config.play_mode = ctx_.config.play_mode == "transcode" ? "auto" : "transcode";
+      ctx_.save_config();
+      rebuild();
+    });
+    header("Monitor (HDMI)");
+    item("Video output", ctx_.config.video_output == "lcd" ? "LCD only" : "Auto", false, [this] {
+      ctx_.config.video_output = ctx_.config.video_output == "lcd" ? "auto" : "lcd";
+      ctx_.save_config();
+      rebuild();
+    });
+    item("Quality", ctx_.config.hdmi_quality == "1080" ? "1080p" : "720p", false, [this] {
+      ctx_.config.hdmi_quality = ctx_.config.hdmi_quality == "1080" ? "720" : "1080";
+      ctx_.save_config();
+      rebuild();
+    });
+    item("Sound", ctx_.config.hdmi_sound == "speaker" ? "CP0 speaker" : "Monitor", false, [this] {
+      ctx_.config.hdmi_sound = ctx_.config.hdmi_sound == "speaker" ? "monitor" : "speaker";
       ctx_.save_config();
       rebuild();
     });

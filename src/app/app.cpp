@@ -142,11 +142,16 @@ int run_app() {
     return jf::discover_servers(1500);
   };
   ctx.demo = demo;
-  ctx.make_backend = [demo] { return player::make_backend(demo); };
+  ctx.make_backend = [demo](const player::BackendOptions& options) { return player::make_backend(demo, options); };
+  // ZEROFIN_DRM_DIR points the check at a fake folder (cardN-HDMI-A-M/status), to test plugging with no cable.
+  ctx.find_hdmi = [] {
+    const char* dir = std::getenv("ZEROFIN_DRM_DIR");
+    return dir && *dir ? player::find_connected_hdmi(dir) : player::find_connected_hdmi();
+  };
   if (!demo) ctx.make_system_volume = [] { return player::make_system_volume(); };
   ctx.start_playback = [&ctx](const jf::PlaybackPlan& plan, const jf::Item& item) {
     // A build without libmpv has no backend (and no demo flag): show the plan instead.
-    if (!ctx.make_backend || !ctx.make_backend()) {
+    if (!ctx.make_backend || !ctx.make_backend(player::BackendOptions{})) {
       show_playback_plan(ctx, plan, item);
       return;
     }

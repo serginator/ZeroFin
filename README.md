@@ -53,8 +53,27 @@ player only. Screens with a text field (address, search, password) type the lett
 | W / E | back 15 s / forward 15 s (act at once, controls can stay hidden) |
 | fn+W / fn+E | previous / next episode |
 | Enter | press the focused icon |
-| Tab | audio and subtitle menu (when the controls are shown) |
+| Tab | open the menu (Audio, Subs, and with a monitor Quality, Sound, Video). Same as the gear icon: move to it with the arrows and press Enter |
 | Esc | hide the controls, then leave the player |
+
+## Playing on a monitor (HDMI)
+
+Plug a monitor into the HDMI port. The next video plays on the monitor, and the LCD shows the title and the controls
+(always visible; the keys are the same). With no monitor, or with "Video output: LCD only", the video plays on the
+LCD as before.
+
+- **Quality:** 720p by default. 1080p is available and may drop frames on hard scenes (the CP0 decodes in software).
+  A file that is 1280x720 or smaller and 6 Mbps or less plays direct. Larger files are transcoded by the server to
+  the chosen size. For 1080p ZeroFin asks for 8 Mbps, because Jellyfin lowers the picture below that.
+- **Sound:** goes to the monitor (ALSA `vc4hdmi`). A monitor with no speakers still reports that it accepts audio,
+  so the CP0 cannot tell. Choose "CP0 speaker" in that case. With monitor sound, the volume keys change the player
+  volume. The monitor has its own volume knob.
+- **Where to change it:** Settings, "Monitor (HDMI)" (video output, quality, sound). While a video plays, open the gear
+  icon (arrows and Enter, or Tab). The menu has tabs: Audio, Subs, Quality, Sound, Video. Left and Right (or Tab) change
+  the tab, Up and Down move in the list, Enter picks, Esc closes. The menu opens on the tab you used last. Quality and
+  video output restart the video at the same position. Sound changes at once.
+- **If the monitor fails or the cable is pulled,** the video continues on the LCD at the same position.
+- `ZEROFIN_OUTPUT=lcd|auto|hdmi` overrides the setting (`hdmi` also works in the simulator, with no monitor).
 
 ## Server address
 
@@ -118,6 +137,8 @@ The package puts the program in `/usr/share/APPLaunch/bin`, so ZeroFin appears i
 | `ZEROFIN_ASSETS=DIR` | Where to find `fonts/`. |
 | `ZEROFIN_DEMO_DURATION=SECONDS` | Demo player: length of the fake video (default 5760). |
 | `ZEROFIN_GRAB_KEYBOARD=1` | Device, for SSH test runs: take the keyboard from the launcher. Off by default, so the OS still sees the long Esc press. |
+| `ZEROFIN_OUTPUT=lcd\|auto\|hdmi` | Where the video plays. `hdmi` forces the monitor layout (simulator tests). |
+| `ZEROFIN_DRM_DIR=DIR` | Where to look for the monitor instead of `/sys/class/drm`: a folder with `card0-HDMI-A-1/status` holding `connected` or `disconnected`. Tests plugging with no cable. |
 | `ZEROFIN_FB=PATH` | Framebuffer device (default `/dev/fb_lcd`, a link to `/dev/fb0`). |
 
 `$ZEROFIN_HOME/profile.json` can override the playback numbers (direct play limit, transcode size and bitrate).

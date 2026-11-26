@@ -182,7 +182,7 @@ TEST_CASE("poster_ref of a movie is its own") {
   CHECK(poster_ref(m).item_id == "m1");
   CHECK(poster_ref(m).tag == "tagA");
   const Item bare = first_item(R"({"Id":"m2","Type":"Movie"})");
-  CHECK_FALSE(poster_ref(bare).empty());
+  CHECK(poster_ref(bare).empty());  // no tag, no poster, no request
   CHECK(poster_ref(bare).tag.empty());
 }
 

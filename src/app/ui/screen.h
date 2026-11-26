@@ -25,6 +25,8 @@ class Screen {
   // Called by the Navigator. Creates the root object and the title bar, then calls build().
   void attach(lv_obj_t* parent);
   lv_obj_t* root() const { return root_; }
+  // False while another screen covers this one. Only the visible screen asks for poster downloads.
+  bool visible() const { return !lv_obj_has_flag(root_, LV_OBJ_FLAG_HIDDEN); }
 
   // False for a screen that fills the whole panel (the player). attach() then skips the title bar.
   virtual bool has_title_bar() const { return true; }

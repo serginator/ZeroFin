@@ -86,7 +86,11 @@ void ImageLoader::finish(Fetched f) {
   if (good) {
     store(f.key, std::move(f.bytes));
   } else {
-    failed_.insert(f.key);  // also for a 401: the main worker handles the login, not an image request
+    // A missing image (404), a refused one (401: the main worker handles the login) and a body that is
+    // not a baseline JPEG will not change. A timeout or a 5xx may work on the next request.
+    const bool permanent = f.error->http_status == 401 || f.error->http_status == 404 ||
+                           f.error->kind == jf::ErrorKind::Parse;
+    if (permanent) failed_.insert(f.key);
   }
   start_next();
   if (good && owner_ && *owner_ && on_ready_) {

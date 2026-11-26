@@ -72,7 +72,7 @@ class HomeScreen : public Screen {
       case ui::Key::Char:
         if (e.ch == 'r' || e.ch == 'R') {
           ctx_.images->forget_failures();
-          load(true);
+          if (pending_ > 0) retry_requested_ = true; else load(true);
           return true;
         }
         return false;
@@ -140,7 +140,20 @@ class HomeScreen : public Screen {
       if (first_error_ && handle_auth_error(ctx_, *first_error_)) return;
       failed_ = first_error_.has_value() && !views_ready_;
     }
-    if (views_ready_ || failed_) rebuild();
+    if (pending_ == 0 && retry_requested_) {
+      retry_requested_ = false;
+      load(true);  // R was pressed while requests ran
+      return;
+    }
+    // Rebuilding drops and creates the LVGL objects, so do it twice at most per load: when the
+    // libraries are known (the tiles show early) and when the last request is done.
+    if (pending_ == 0) {
+      early_built_ = false;
+      if (views_ready_ || failed_) rebuild();
+    } else if (views_ready_ && !early_built_) {
+      early_built_ = true;
+      rebuild();
+    }
   }
 
   void add_poster_row(const std::string& key, const std::string& header, const std::vector<jf::Item>& items) {
@@ -245,7 +258,7 @@ class HomeScreen : public Screen {
       r.view->collect_wants(left, visible + 1, i == sel ? 0 : (i == sel + 1 ? 1 : 3), wants);
       if (i == sel) r.view->collect_wants(left + visible + 1, 4, 2, wants);
     }
-    ctx_.images->want(alive(), std::move(wants), ctx_.client, [this] { layout(); });
+    if (visible()) ctx_.images->want(alive(), std::move(wants), ctx_.client, [this] { layout(); });
   }
 
   void activate() {
@@ -272,6 +285,8 @@ class HomeScreen : public Screen {
   int pending_ = 0;
   bool failed_ = false;
   bool views_ready_ = false;
+  bool early_built_ = false;       // rebuilt once while requests still run
+  bool retry_requested_ = false;   // R was pressed while requests ran
   uint32_t last_full_ = 0;
 };
 
@@ -377,7 +392,7 @@ class ItemListScreen : public Screen {
   void refresh_grid() {
     grid_->set_selected(flat_index(cursor_));
     grid_->refresh(*ctx_.images);
-    ctx_.images->want(alive(), grid_->wants(), ctx_.client, [this] { grid_->refresh(*ctx_.images); });
+    if (visible()) ctx_.images->want(alive(), grid_->wants(), ctx_.client, [this] { grid_->refresh(*ctx_.images); });
   }
 
   void load_more() {
@@ -509,7 +524,7 @@ class SearchScreen : public Screen {
     if (results_.empty()) return;
     grid_->set_selected(flat_index(cursor_), in_list_);
     grid_->refresh(*ctx_.images);
-    ctx_.images->want(alive(), grid_->wants(), ctx_.client, [this] { grid_->refresh(*ctx_.images); });
+    if (visible()) ctx_.images->want(alive(), grid_->wants(), ctx_.client, [this] { grid_->refresh(*ctx_.images); });
   }
 
   void schedule() {

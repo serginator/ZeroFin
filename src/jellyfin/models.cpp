@@ -231,8 +231,11 @@ ImageRef poster_ref(const Item& item) {
   const bool series_poster = !item.series_id.empty() &&
                              (item.type == ItemType::Episode ||
                               (item.type == ItemType::Season && item.primary_image_tag.empty()));
-  if (series_poster) return ImageRef{item.series_id, item.series_primary_image_tag};
-  return ImageRef{item.id, item.primary_image_tag};
+  // An item without an image tag has no poster. An empty ref makes no request.
+  if (series_poster) {
+    return item.series_primary_image_tag.empty() ? ImageRef{} : ImageRef{item.series_id, item.series_primary_image_tag};
+  }
+  return item.primary_image_tag.empty() ? ImageRef{} : ImageRef{item.id, item.primary_image_tag};
 }
 
 Result<PlaybackInfo> parse_playback_info(std::string_view text) {

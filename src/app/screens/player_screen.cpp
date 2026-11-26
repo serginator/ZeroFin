@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdlib>
 #include <memory>
 #include <optional>
 
@@ -160,7 +161,9 @@ class PlayerScreen : public Screen {
     params.start_seconds = jf::ticks_to_seconds(plan_.start_ticks);
     params.subtitle_url = plan_.external_subtitle_url;
     params.volume = muted_ ? 0 : ctx_.volume;
-    params.hardware_decode = plan_.method == jf::Method::DirectPlay;
+    // Hardware decode hung the player on 720p and 1080p files on the CP0. Software decode is the
+    // default. ZEROFIN_HWDEC=1 turns the hardware decoder on again, for experiments.
+    params.hardware_decode = plan_.method == jf::Method::DirectPlay && std::getenv("ZEROFIN_HWDEC") != nullptr;
     if (plan_.method == jf::Method::DirectPlay && !item_.media_sources.empty()) {
       // Direct play sends the whole file, so the server ignores the track choice. Pick here.
       params.audio_track = ui::track_ordinal(item_.media_sources[0].audio_streams(), plan_.audio_index);

@@ -13,7 +13,7 @@ struct StartParams {
   double start_seconds = 0;
   std::optional<std::string> subtitle_url;  // text subtitle file, drawn by the backend
   int volume = 100;                         // 0 to 100
-  bool hardware_decode = true;              // direct play only
+  bool hardware_decode = false;             // direct play only. v4l2m2m hangs on the CP0 (0.2.0 bug)
   // Direct play only. The server sends the whole file, so the backend picks the tracks.
   std::optional<int> audio_track;           // 1-based libmpv audio track number. None = the default.
   bool disable_embedded_subtitles = false;  // text subtitles come from subtitle_url instead

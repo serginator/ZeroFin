@@ -99,11 +99,11 @@ TEST_CASE("demo series: seasons, episodes and search") {
   CHECK(d.client->search("zzzz").value().items.empty());
 }
 
-TEST_CASE("demo playback: direct play for the Main 1080p file, transcode for the 8 Mbps one") {
+TEST_CASE("demo playback: direct play for the Main 720p file, transcode for the 8 Mbps one") {
   Demo d;
   d.login();
 
-  auto direct_item = d.client->item("m4");  // variant 0: H.264 Main 1080p 5.2 Mbps
+  auto direct_item = d.client->item("m4");  // variant 0: H.264 Main 720p 5.2 Mbps
   REQUIRE(direct_item.ok());
   PlayRequest req;
   req.item_id = "m4";

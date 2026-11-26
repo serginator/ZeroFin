@@ -25,8 +25,8 @@ TEST_CASE("Auto profile allows H.264 direct play within the caps") {
 
   const json& cond = p["CodecProfiles"][0]["Conditions"];
   CHECK(p["CodecProfiles"][0]["Codec"] == "h264");
-  CHECK((*find_condition(cond, "Width"))["Value"] == "1920");
-  CHECK((*find_condition(cond, "Height"))["Value"] == "1080");
+  CHECK((*find_condition(cond, "Width"))["Value"] == "1280");
+  CHECK((*find_condition(cond, "Height"))["Value"] == "720");
   CHECK((*find_condition(cond, "VideoBitDepth"))["Value"] == "8");
   CHECK((*find_condition(cond, "VideoBitrate"))["Value"] == "6000000");
   CHECK((*find_condition(cond, "VideoBitrate"))["Condition"] == "LessThanEqual");
@@ -75,7 +75,7 @@ TEST_CASE("playback_profile_from_json overrides listed keys only") {
   REQUIRE(r.ok());
   CHECK(r.value().direct_max_bitrate == 4'000'000);
   CHECK(r.value().transcode_max_fps == 15);
-  CHECK(r.value().direct_max_width == 1920);  // default kept
+  CHECK(r.value().direct_max_width == 1280);  // default kept
   CHECK(r.value().transcode_max_width == 320);
 }
 

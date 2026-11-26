@@ -136,7 +136,7 @@ json streams_for(int variant) {
   };
   switch (variant) {
     case 0:
-      video("h264", "Main", 1920, 1080, 8, 23.976);
+      video("h264", "Main", 1280, 720, 8, 23.976);
       audio(1, "aac", "eng", 2, true);
       audio(2, "aac", "jpn", 2, false);
       sub(3, "subrip", "eng", true);

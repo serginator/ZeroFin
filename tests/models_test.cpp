@@ -28,7 +28,7 @@ TEST_CASE("parse_item_list reads a movie with media streams") {
   CHECK(src.bitrate == 5'200'000);
   REQUIRE(src.video() != nullptr);
   CHECK(src.video()->codec == "h264");
-  CHECK(src.video()->width == 1920);
+  CHECK(src.video()->width == 1280);
   CHECK(src.video()->bit_depth == 8);
   CHECK(src.video()->fps == doctest::Approx(23.976));
   CHECK(src.audio_streams().size() == 1);

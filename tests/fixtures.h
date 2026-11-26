@@ -5,7 +5,7 @@
 // JSON shaped like real Jellyfin replies, cut down to the fields the app reads.
 namespace fixtures {
 
-// One movie (H.264 Main 1080p, 5.2 Mbps, text and image subtitles) and one episode.
+// One movie (H.264 Main 720p, 5.2 Mbps, text and image subtitles) and one episode.
 inline std::string items_json(long long movie_bitrate = 5'200'000, const char* video_codec = "h264",
                               const char* profile = "Main", int bit_depth = 8) {
   return std::string(R"({"Items":[{"Id":"m1","Name":"Movie One","Type":"Movie","ProductionYear":1999,)") +
@@ -14,7 +14,7 @@ inline std::string items_json(long long movie_bitrate = 5'200'000, const char* v
          R"("MediaSources":[{"Id":"ms1","Container":"mkv","Bitrate":)" + std::to_string(movie_bitrate) +
          R"(,"RunTimeTicks":54000000000,"MediaStreams":[)" +
          R"({"Index":0,"Type":"Video","Codec":")" + video_codec + R"(","Profile":")" + profile +
-         R"(","Width":1920,"Height":1080,"BitDepth":)" + std::to_string(bit_depth) +
+         R"(","Width":1280,"Height":720,"BitDepth":)" + std::to_string(bit_depth) +
          R"(,"RealFrameRate":23.976,"IsInterlaced":false},)" +
          R"({"Index":1,"Type":"Audio","Codec":"aac","Language":"jpn","Channels":2,"IsDefault":true},)" +
          R"({"Index":2,"Type":"Subtitle","Codec":"subrip","Language":"eng","IsTextSubtitleStream":true},)" +

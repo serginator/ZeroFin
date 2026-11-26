@@ -14,9 +14,11 @@ enum class PlayMode { Auto, AlwaysTranscode };
 
 // The one place that holds the playback numbers. Loadable from a JSON file.
 struct PlaybackProfile {
-  // Direct play limits (Auto mode).
-  int direct_max_width = 1920;
-  int direct_max_height = 1080;
+  // Direct play limits (Auto mode). Direct play decodes in software. On the CP0, 20 s of 720p
+  // decode in 7.8 s, but 1080p needs 17 s (almost real time), so larger files use a server
+  // transcode. Hardware decode (v4l2m2m) hangs the player on 720p and 1080p files.
+  int direct_max_width = 1280;
+  int direct_max_height = 720;
   int direct_max_bit_depth = 8;
   int64_t direct_max_bitrate = 6'000'000;  // total source bitrate, bits per second
   // Server transcode target. The screen is 320x170.

@@ -10,8 +10,8 @@ struct Spec {
   const char* codec = "h264";
   const char* profile = "Main";
   int bit_depth = 8;
-  int width = 1920;
-  int height = 1080;
+  int width = 1280;
+  int height = 720;
   int64_t source_bitrate = 5'200'000;
   int64_t video_bitrate = 0;
   bool interlaced = false;
@@ -60,7 +60,7 @@ Decision decide(const Spec& s, PlayMode mode = PlayMode::Auto, std::optional<int
 
 }  // namespace
 
-TEST_CASE("H.264 Main 1080p under the bitrate cap plays directly") {
+TEST_CASE("H.264 Main 720p under the bitrate cap plays directly") {
   const Decision d = decide(Spec{});
   CHECK(d.method == Method::DirectPlay);
   CHECK(d.reason == Reason::Ok);
@@ -121,8 +121,11 @@ TEST_CASE("Baseline, Constrained Baseline, Main and High play directly; unknown 
   CHECK(decide(s).reason == Reason::UnsupportedH264Profile);
 }
 
-TEST_CASE("resolutions above 1080p are transcoded") {
+TEST_CASE("resolutions above 720p are transcoded") {
   Spec s;
+  s.width = 1920;
+  s.height = 1080;
+  CHECK(decide(s).reason == Reason::ResolutionTooHigh);
   s.width = 3840;
   s.height = 2160;
   CHECK(decide(s).reason == Reason::ResolutionTooHigh);

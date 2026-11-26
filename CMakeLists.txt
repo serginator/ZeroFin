@@ -47,6 +47,17 @@ if(PkgConfig_FOUND)
 endif()
 option(ZEROFIN_WITH_MPV "Use libmpv for playback" ${_zerofin_mpv_found})
 
+# ALSA sets the volume of the device (the global volume). Without it the volume keys only change the
+# volume of the player.
+set(_zerofin_alsa_found OFF)
+if(PkgConfig_FOUND)
+  pkg_check_modules(ALSA QUIET IMPORTED_TARGET alsa)
+  if(ALSA_FOUND)
+    set(_zerofin_alsa_found ON)
+  endif()
+endif()
+option(ZEROFIN_WITH_ALSA "Set the device volume through ALSA" ${_zerofin_alsa_found})
+
 add_subdirectory(src/jellyfin)
 add_subdirectory(src/player)
 add_subdirectory(src/storage)

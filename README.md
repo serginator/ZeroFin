@@ -48,8 +48,8 @@ player only. Screens with a text field (address, search, password) type the lett
 |---|---|
 | F / X / Z / C | up / down / left / right (move between the control icons) |
 | Q | play / pause |
-| S / D | volume down / up |
-| A | mute |
+| S / D | volume down / up (the device volume, shared with the OS) |
+| A | mute (the device mute switch) |
 | W / E | back 15 s / forward 15 s (act at once, controls can stay hidden) |
 | fn+W / fn+E | previous / next episode |
 | Enter | press the focused icon |

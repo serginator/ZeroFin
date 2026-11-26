@@ -32,7 +32,8 @@ add_executable(zerofin_tests
   status_info_test.cpp
   storage_test.cpp
   text_edit_test.cpp
-  url_test.cpp)
+  url_test.cpp
+  volume_test.cpp)
 target_link_libraries(zerofin_tests PRIVATE zerofin_player zerofin_jellyfin zerofin_storage zerofin_ui_core doctest::doctest)
 target_compile_options(zerofin_tests PRIVATE -Wall -Wextra)
 

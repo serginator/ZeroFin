@@ -8,6 +8,7 @@
 #include "jellyfin/client.h"
 #include "jellyfin/discovery.h"
 #include "player/backend.h"
+#include "player/system_volume.h"
 #include "storage/config_store.h"
 #include "ui/async.h"
 #include "ui/theme.h"
@@ -38,7 +39,10 @@ struct AppContext {
   // Makes the player backend. Always set. The backend it returns is null when the build has no player.
   std::function<std::unique_ptr<player::PlayerBackend>()> make_backend;
   bool demo = false;  // ZEROFIN_DEMO: fake server, fake player, fake status values
-  int volume = 100;   // 0 to 100, kept while the app runs
+  // Opens the device mixer. Null in the demo, so the demo never changes the real volume. The
+  // mixer may be unavailable: the factory then returns nullptr.
+  std::function<std::unique_ptr<player::SystemVolume>()> make_system_volume;
+  int volume = 100;   // 0 to 100. The player volume when there is no device mixer, kept while the app runs
 
   // Called when the user starts a title. Opens the player, or shows the plan when the build has no player.
   std::function<void(const jf::PlaybackPlan&, const jf::Item&)> start_playback;

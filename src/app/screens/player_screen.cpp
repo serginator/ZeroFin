@@ -6,6 +6,7 @@
 #include "platform/platform.h"
 #include "platform/status_reader.h"
 #include "player/backend.h"
+#include "player/volume.h"
 #include "screens/screens.h"
 #include "ui/player_overlay.h"
 #include "ui/widgets.h"
@@ -73,6 +74,7 @@ class PlayerScreen : public Screen {
       leave();
       return;
     }
+    volume_ = std::make_unique<player::Volume>(ctx_.make_system_volume ? ctx_.make_system_volume() : nullptr, ctx_.volume);
     start_stream();
     load_episode_list();
   }
@@ -111,21 +113,21 @@ class PlayerScreen : public Screen {
         overlay_->show_notice("+" + std::to_string(ui::kSeekSeconds) + " s");
         break;
       case ui::PlayerAction::ToggleMute:
-        muted_ = !muted_;
-        backend_->set_volume(muted_ ? 0 : ctx_.volume);
-        if (muted_) {
+        volume_->toggle_mute();
+        backend_->set_volume(volume_->backend_percent());
+        if (volume_->muted()) {
           overlay_->show_notice("Muted");
         } else {
-          overlay_->show_volume(ctx_.volume);
+          overlay_->show_volume(volume_->level());
         }
         break;
       case ui::PlayerAction::VolumeUp:
       case ui::PlayerAction::VolumeDown: {
         const int step = action == ui::PlayerAction::VolumeUp ? kVolumeStep : -kVolumeStep;
-        ctx_.volume = std::clamp(ctx_.volume + step, 0, 100);
-        muted_ = false;  // changing the volume ends the mute
-        backend_->set_volume(ctx_.volume);
-        overlay_->show_volume(ctx_.volume);
+        volume_->change(step);  // changing the volume ends the mute
+        ctx_.volume = volume_->level();
+        backend_->set_volume(volume_->backend_percent());
+        overlay_->show_volume(volume_->level());
         break;
       }
       case ui::PlayerAction::Previous:
@@ -160,7 +162,7 @@ class PlayerScreen : public Screen {
     params.url = plan_.url;
     params.start_seconds = jf::ticks_to_seconds(plan_.start_ticks);
     params.subtitle_url = plan_.external_subtitle_url;
-    params.volume = muted_ ? 0 : ctx_.volume;
+    params.volume = volume_->backend_percent();
     // Hardware decode hung the player on 720p and 1080p files on the CP0. Software decode is the
     // default. ZEROFIN_HWDEC=1 turns the hardware decoder on again, for experiments.
     params.hardware_decode = plan_.method == jf::Method::DirectPlay && std::getenv("ZEROFIN_HWDEC") != nullptr;
@@ -528,7 +530,7 @@ class PlayerScreen : public Screen {
   bool retried_ = false;
   bool force_transcode_ = false;  // set after a direct play failed: this item plays as a transcode
   bool menu_open_ = false;
-  bool muted_ = false;
+  std::unique_ptr<player::Volume> volume_;  // set in on_show, before the first stream
   bool left_ = false;
 };
 

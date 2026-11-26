@@ -17,6 +17,7 @@
 #include "jellyfin/discovery.h"
 #include "platform/platform.h"
 #include "player/backend.h"
+#include "player/system_volume.h"
 #include "screens/screens.h"
 #include "script_runner.h"
 #include "storage/config_store.h"
@@ -142,6 +143,7 @@ int run_app() {
   };
   ctx.demo = demo;
   ctx.make_backend = [demo] { return player::make_backend(demo); };
+  if (!demo) ctx.make_system_volume = [] { return player::make_system_volume(); };
   ctx.start_playback = [&ctx](const jf::PlaybackPlan& plan, const jf::Item& item) {
     // A build without libmpv has no backend (and no demo flag): show the plan instead.
     if (!ctx.make_backend || !ctx.make_backend()) {

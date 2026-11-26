@@ -20,6 +20,7 @@ add_executable(zerofin_tests
   hdmi_test.cpp
   keys_test.cpp
   list_cursor_test.cpp
+  menu_tabs_test.cpp
   models_test.cpp
   player_backend_test.cpp
   player_controls_test.cpp

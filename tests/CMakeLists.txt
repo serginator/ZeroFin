@@ -17,6 +17,7 @@ add_executable(zerofin_tests
   discovery_test.cpp
   format_test.cpp
   grid_cursor_test.cpp
+  hdmi_test.cpp
   keys_test.cpp
   list_cursor_test.cpp
   models_test.cpp

@@ -56,6 +56,21 @@ player only. Screens with a text field (address, search, password) type the lett
 | Tab | audio and subtitle menu (when the controls are shown) |
 | Esc | hide the controls, then leave the player |
 
+## Typing symbols
+
+All 95 printable ASCII characters can be typed in the address, search and password fields. Letters and digits work
+as normal, and Shift makes capitals. The sym key gives the rest:
+
+| sym + | gives |
+|---|---|
+| 1 2 3 4 5 6 7 8 9 0 | `! @ # $ % ^ & * ( )` |
+| Q W E R T Y U I O P | ``~ ` _ - + = [ ] { }`` |
+| A S D G H J K L | `; : ' " < > \ \|` |
+| V B N M | `, . / ?` |
+
+F, Z, X and C have no symbol, because they are the arrow keys. The app reads the codes that the CP0 keyboard driver
+sends (the table is in `src/ui_core/keys.cpp`). A USB keyboard sends the standard US codes and works as well.
+
 ## Device (Cardputer Zero, native build)
 
 ```sh

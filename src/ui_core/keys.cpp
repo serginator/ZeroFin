@@ -16,9 +16,33 @@ constexpr const char kRowZ[] = "zxcvbnm";      // codes 44..50
 constexpr const char kDigits[] = "1234567890"; // codes 2..11
 constexpr const char kDigitsShifted[] = "!@#$%^&*()";
 
+// The sym layer of the CP0 keyboard. These are the codes of the driver table "linux,keymap1" (device
+// tree node tca8418@34) and of /usr/share/keymaps/tca8418_keypad_m5stack_keymap.map. Together with
+// the digits and letters they cover all 32 printable ASCII symbols.
+struct SymCode {
+  unsigned code;
+  char ch;
+};
+constexpr SymCode kCp0Sym[] = {
+    // sym + 1 2 3 4 5 6 7 8 9 0
+    {26, '!'}, {27, '@'}, {39, '#'}, {40, '$'}, {41, '%'}, {43, '^'}, {51, '&'}, {52, '*'}, {53, '('}, {94, ')'},
+    // sym + Q W E R T Y U I O P
+    {55, '~'}, {69, '`'}, {70, '_'}, {71, '-'}, {72, '+'}, {73, '='}, {74, '['}, {75, ']'}, {76, '{'}, {77, '}'},
+    // sym + A S D G H J K L   (F is the up arrow and has no symbol)
+    {79, ';'}, {80, ':'}, {81, '\''}, {82, '"'}, {83, '<'}, {85, '>'}, {86, '\\'}, {89, '|'},
+    // sym + V B N M   (Z X C are the arrows)
+    {90, ','}, {91, '.'}, {92, '/'}, {93, '?'},
+};
+
 }  // namespace
 
-KeyEvent map_evdev_key(unsigned code, bool shift) {
+KeyEvent map_evdev_key(unsigned code, bool shift, KeyLayout layout) {
+  if (layout == KeyLayout::Cp0) {
+    for (const SymCode& s : kCp0Sym) {
+      if (s.code == code) return ch(s.ch);
+    }
+  }
+
   // Letters.
   const char* row = nullptr;
   unsigned first = 0;
@@ -61,8 +85,6 @@ KeyEvent map_evdev_key(unsigned code, bool shift) {
     case 52: return ch(shift ? '>' : '.');
     case 53: return ch(shift ? '?' : '/');
     case 57: return ch(' ');
-    case 80: return ch(':');  // sym+s on the CP0
-    case 91: return ch(shift ? '>' : '.');  // sym+b on the CP0 (the sym key itself sends 383, ignored)
     case 96: return just(Key::Enter);  // keypad enter
     case 102: return just(Key::Home);
     case 103: return just(Key::Up);

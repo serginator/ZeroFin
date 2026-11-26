@@ -28,6 +28,16 @@ bool has_key(int fd, int code) {
   return (bits[code / per] & (1UL << (code % per))) != 0;
 }
 
+// The CP0 keyboard is the TCA8418 matrix. It has the sym key (code 383) and sends its own codes for
+// the symbols. Any other keyboard (a USB one) sends the standard US codes.
+ui::KeyLayout layout_of(int fd) {
+  char name[64] = {};
+  if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name) > 0 && std::strstr(name, "tca8418") != nullptr) {
+    return ui::KeyLayout::Cp0;
+  }
+  return has_key(fd, 383) ? ui::KeyLayout::Cp0 : ui::KeyLayout::Us;
+}
+
 class FbPlatform : public Platform {
  public:
   FbPlatform() {
@@ -72,11 +82,11 @@ class FbPlatform : public Platform {
   }
 
   bool poll(std::vector<ui::KeyEvent>& out) override {
-    for (int fd : fds_) {
+    for (size_t i = 0; i < fds_.size(); ++i) {
       input_event ev{};
-      while (read(fd, &ev, sizeof(ev)) == static_cast<ssize_t>(sizeof(ev))) {
+      while (read(fds_[i], &ev, sizeof(ev)) == static_cast<ssize_t>(sizeof(ev))) {
         if (ev.type != EV_KEY) continue;
-        handle(ev.code, ev.value, out);
+        handle(ev.code, ev.value, layouts_[i], out);
       }
     }
     return true;
@@ -96,7 +106,9 @@ class FbPlatform : public Platform {
       if (fd < 0) continue;
       if (has_key(fd, KEY_ENTER) || has_key(fd, KEY_A) || has_key(fd, KEY_ESC)) {
         fds_.push_back(fd);
-        std::fprintf(stderr, "keyboard: %s\n", path.c_str());
+        layouts_.push_back(layout_of(fd));
+        std::fprintf(stderr, "keyboard: %s (%s layout)\n", path.c_str(),
+                     layouts_.back() == ui::KeyLayout::Cp0 ? "cp0" : "us");
         // Test runs over SSH: keep the keys from the launcher behind this app. Off by default,
         // because the OS must still see the long Esc press that goes home.
         if (std::getenv("ZEROFIN_GRAB_KEYBOARD") && ioctl(fd, EVIOCGRAB, 1) < 0) {
@@ -109,7 +121,7 @@ class FbPlatform : public Platform {
     closedir(dir);
   }
 
-  void handle(unsigned code, int value, std::vector<ui::KeyEvent>& out) {
+  void handle(unsigned code, int value, ui::KeyLayout layout, std::vector<ui::KeyEvent>& out) {
     if (log_keys_) std::fprintf(stderr, "key code=%u value=%d\n", code, value);
     if (ui::is_shift_code(code)) {
       shift_ = value != 0;
@@ -120,11 +132,11 @@ class FbPlatform : public Platform {
       return;
     }
     if (value == 0) return;  // key release
-    ui::KeyEvent key = ui::map_evdev_key(code, shift_);
+    ui::KeyEvent key = ui::map_evdev_key(code, shift_, layout);
     if (key.key == ui::Key::Char && caps_) {
       // Caps Lock flips the case of letters only.
-      const ui::KeyEvent plain = ui::map_evdev_key(code, false);
-      const ui::KeyEvent upper = ui::map_evdev_key(code, true);
+      const ui::KeyEvent plain = ui::map_evdev_key(code, false, layout);
+      const ui::KeyEvent upper = ui::map_evdev_key(code, true, layout);
       if (plain.ch != upper.ch && std::isalpha(static_cast<unsigned char>(plain.ch))) {
         key = shift_ ? plain : upper;
       }
@@ -137,6 +149,7 @@ class FbPlatform : public Platform {
   lv_display_t* disp_ = nullptr;
   std::string fb_path_;
   std::vector<int> fds_;
+  std::vector<ui::KeyLayout> layouts_;  // one per entry of fds_
   bool shift_ = false;
   bool caps_ = false;
   bool log_keys_ = false;

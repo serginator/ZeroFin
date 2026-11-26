@@ -7,6 +7,7 @@ add_library(zerofin_ui_core STATIC
   status_info.cpp
   list_cursor.cpp
   menu_tabs.cpp
+  output_watch.cpp
   grid_cursor.cpp
   request_queue.cpp
   cards.cpp

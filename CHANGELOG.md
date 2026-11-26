@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/serginator/ZeroFin/compare/v0.2.0...v0.3.0) (2026-11-26)
+
+
+### Features
+
+* try the likely addresses for the server ([0f1fa97](https://github.com/serginator/ZeroFin/commit/0f1fa97b96b159dccbbe3f06d07ac4dd207e1f4e))
+
+
+### Bug Fixes
+
+* let the Quick Connect screen open the server list ([0f04452](https://github.com/serginator/ZeroFin/commit/0f04452216a1009fc772371103da3023003fb563))
+* make poster loading more robust ([147afef](https://github.com/serginator/ZeroFin/commit/147afeff4e64e17d750d81eec6bc6b1d64d77e86))
+* stop the player from hanging on direct play ([23eaa89](https://github.com/serginator/ZeroFin/commit/23eaa89789bdcd0cf50f633c6c36a201f8845131))
+* type every symbol on the Cardputer Zero keyboard ([434f4ce](https://github.com/serginator/ZeroFin/commit/434f4cea56156d042fe9c8b3c836ce961b06a299))
+
 ## [0.2.0](https://github.com/serginator/ZeroFin/compare/v0.1.1...v0.2.0) (2026-11-25)
 
 

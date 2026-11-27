@@ -35,7 +35,7 @@ std::string Client::url_for(const std::string& path, const QueryParams& query) c
 }
 
 Result<std::string> Client::request(const std::string& method, const std::string& path, const QueryParams& query,
-                                    const std::string& body, int timeout_ms) {
+                                    const std::string& body, int timeout_ms, std::string* effective_url) {
   HttpRequest req;
   req.method = method;
   if (timeout_ms > 0) req.timeout_ms = timeout_ms;
@@ -47,6 +47,7 @@ Result<std::string> Client::request(const std::string& method, const std::string
     req.body = body;
   }
   HttpResponse res = http_.send(req);
+  if (effective_url) *effective_url = res.effective_url;
   if (res.status == 0) return Error{ErrorKind::Network, res.error.empty() ? "no response" : res.error, 0};
   if (res.status == 401) return Error{ErrorKind::Unauthorized, "the server rejected the login", 401};
   if (res.status == 404) return Error{ErrorKind::NotFound, "not found", 404};
@@ -58,7 +59,21 @@ Result<std::string> Client::request(const std::string& method, const std::string
 // ---- server and login ----
 
 Result<ServerInfo> Client::public_info(int timeout_ms) {
-  return parse_reply<ServerInfo>(request("GET", "/System/Info/Public", {}, {}, timeout_ms), parse_server_info);
+  // A server can answer http:// with a redirect to https://. The transport follows it for this GET. It does not
+  // follow it safely for a POST: curl drops the Authorization header when the scheme changes, so Quick Connect
+  // fails with HTTP 400. So the address that answered becomes the base address.
+  std::string effective;
+  auto reply = request("GET", "/System/Info/Public", {}, {}, timeout_ms, &effective);
+  if (reply) adopt_redirected_base(effective, "/System/Info/Public");
+  return parse_reply<ServerInfo>(reply, parse_server_info);
+}
+
+void Client::adopt_redirected_base(const std::string& effective_url, const std::string& path) {
+  const std::string target = effective_url.substr(0, effective_url.find_first_of("?#"));
+  if (target.size() <= path.size() || target.compare(target.size() - path.size(), path.size(), path) != 0) return;
+  std::string base = target.substr(0, target.size() - path.size());
+  const bool downgrade = base_url_.rfind("https://", 0) == 0 && base.rfind("http://", 0) == 0;
+  if (!downgrade && (base.rfind("https://", 0) == 0 || base.rfind("http://", 0) == 0)) base_url_ = std::move(base);
 }
 
 Result<QuickConnectSession> Client::quick_connect_initiate() {

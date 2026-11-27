@@ -54,6 +54,23 @@ TEST_CASE("normalize_server_url cleans user input") {
   CHECK(normalize_server_url("192.168.1.157:8096/") == "http://192.168.1.157:8096");
 }
 
+TEST_CASE("normalize_server_url drops the web client part of a pasted browser address") {
+  CHECK(normalize_server_url("https://jf.example.com/web/") == "https://jf.example.com");
+  CHECK(normalize_server_url("https://jf.example.com/web") == "https://jf.example.com");
+  CHECK(normalize_server_url("https://jf.example.com/web/index.html#!/home.html") == "https://jf.example.com");
+  CHECK(normalize_server_url("jf.example.com:8920/Web/index.html") == "http://jf.example.com:8920");
+  CHECK(normalize_server_url("https://jf.example.com/jellyfin/web/index.html") == "https://jf.example.com/jellyfin");
+  CHECK(normalize_server_url("https://jf.example.com/jellyfin/") == "https://jf.example.com/jellyfin");
+  CHECK(normalize_server_url("https://jf.example.com/website") == "https://jf.example.com/website");
+  CHECK(normalize_server_url("http://web") == "http://web");
+}
+
+TEST_CASE("a pasted browser address is tried without the web client part") {
+  const auto urls = server_url_candidates("https://jf.example.com/web/index.html#!/home.html");
+  REQUIRE(!urls.empty());
+  CHECK(urls.front() == "https://jf.example.com");
+}
+
 TEST_CASE("normalize_server_url rejects unusable input") {
   CHECK(normalize_server_url("") == std::nullopt);
   CHECK(normalize_server_url("   ") == std::nullopt);

@@ -68,6 +68,9 @@ class Client {
 
   void set_session(Session session) { session_ = std::move(session); }
   const Session& session() const { return session_; }
+  // The server address that requests use. public_info() can change it when the server redirects
+  // (http:// to https://), so save this one, not the address that was typed.
+  const std::string& base_url() const { return base_url_; }
   void set_profile(PlaybackProfile profile) { profile_ = profile; }
 
   // Server and login.
@@ -106,11 +109,13 @@ class Client {
 
  private:
   Result<std::string> request(const std::string& method, const std::string& path, const QueryParams& query = {},
-                              const std::string& body = {}, int timeout_ms = 0);
+                              const std::string& body = {}, int timeout_ms = 0, std::string* effective_url = nullptr);
   Result<AuthResult> login(const std::string& path, const std::string& body);  // also sets the session
   Result<ItemList> list_request(const std::string& path, const QueryParams& query);
   Result<Unit> report(const char* path, const ProgressReport& report, bool with_pause);
   std::string url_for(const std::string& path, const QueryParams& query = {}) const;
+  // Takes the address a request ended up at (after redirects) as the new base, when it still ends with `path`.
+  void adopt_redirected_base(const std::string& effective_url, const std::string& path);
 
   HttpClient& http_;
   ClientInfo info_;

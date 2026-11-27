@@ -22,6 +22,8 @@ struct HttpResponse {
   int status = 0;       // 0 when the transport failed
   std::string body;
   std::string error;    // transport error text, empty when a response arrived
+  // The address the reply came from, after redirects. Empty when the transport does not know it.
+  std::string effective_url;
 };
 
 // Transport seam. The real one uses libcurl. Tests use a fake.

@@ -20,7 +20,12 @@ class FakeHttp : public HttpClient {
   bool transport_fails = false;
 
   void on(const std::string& method_and_path, int status, std::string body = {}) {
-    routes[method_and_path] = HttpResponse{status, std::move(body), {}};
+    routes[method_and_path] = HttpResponse{status, std::move(body), {}, {}};
+  }
+
+  // A reply that came after a redirect. `effective_url` is where the transport ended up.
+  void on_redirected(const std::string& method_and_path, std::string effective_url, std::string body) {
+    routes[method_and_path] = HttpResponse{200, std::move(body), {}, std::move(effective_url)};
   }
 
   HttpResponse send(const HttpRequest& request) override {
@@ -77,6 +82,45 @@ TEST_CASE("public_info sends the client header and no token") {
   CHECK(auth.find("Client=\"ZeroFin\"") != std::string::npos);
   CHECK(auth.find("DeviceId=\"dev1\"") != std::string::npos);
   CHECK(auth.find("Token=") == std::string::npos);
+}
+
+TEST_CASE("public_info follows a redirect to https and uses that address from then on") {
+  FakeHttp http;
+  Client client(http, test_info(), "http://srv.example");
+  http.on_redirected("GET /System/Info/Public", "https://srv.example/System/Info/Public",
+                     R"({"Id":"abc","ServerName":"jellyPi","Version":"12.4.0"})");
+  http.on("POST /QuickConnect/Initiate", 200, R"({"Secret":"sec","Code":"123456"})");
+  REQUIRE(client.public_info().ok());
+  CHECK(client.base_url() == "https://srv.example");
+  REQUIRE(client.quick_connect_initiate().ok());
+  CHECK(http.last().url == "https://srv.example/QuickConnect/Initiate");
+}
+
+TEST_CASE("public_info keeps a base path when the redirect keeps it") {
+  FakeHttp http;
+  Client client(http, test_info(), "http://srv.example/jf");
+  http.on_redirected("GET /jf/System/Info/Public", "https://srv.example/jf/System/Info/Public?x=1",
+                     R"({"Id":"abc","ServerName":"jellyPi","Version":"12.4.0"})");
+  REQUIRE(client.public_info().ok());
+  CHECK(client.base_url() == "https://srv.example/jf");
+}
+
+TEST_CASE("public_info does not move from https to http") {
+  FakeHttp http;
+  Client client(http, test_info(), "https://srv.example");
+  http.on_redirected("GET /System/Info/Public", "http://srv.example/System/Info/Public",
+                     R"({"Id":"abc","ServerName":"jellyPi","Version":"12.4.0"})");
+  REQUIRE(client.public_info().ok());
+  CHECK(client.base_url() == "https://srv.example");
+}
+
+TEST_CASE("public_info ignores an effective address that is not the one it asked for") {
+  FakeHttp http;
+  Client client(http, test_info(), "http://srv:8096");
+  http.on_redirected("GET /System/Info/Public", "https://login.example/portal",
+                     R"({"Id":"abc","ServerName":"jellyPi","Version":"12.4.0"})");
+  REQUIRE(client.public_info().ok());
+  CHECK(client.base_url() == "http://srv:8096");
 }
 
 TEST_CASE("public_info can use a short timeout, for trying several addresses") {

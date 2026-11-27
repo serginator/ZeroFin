@@ -138,11 +138,12 @@ class SetupScreen : public Screen {
     // A short wait per address when there are several, so a wrong one does not hold the others back.
     const int timeout_ms = several ? kProbeTimeoutMs : 0;
     async([client, timeout_ms] { return client->public_info(timeout_ms); },
-          [this, urls, i, first_error](jf::Result<jf::ServerInfo> r) mutable {
+          [this, client, urls, i, first_error](jf::Result<jf::ServerInfo> r) mutable {
             if (r) {
               checking_ = false;
               set_status("");
-              ctx_.use_server((*urls)[i], r.value().name);
+              // The client holds the address that answered. It differs from the typed one after a redirect to https.
+              ctx_.use_server(client->base_url(), r.value().name);
               ctx_.nav->push(make_connect_screen(ctx_));
               return;
             }

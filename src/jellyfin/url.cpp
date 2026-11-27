@@ -186,6 +186,25 @@ std::string redact_text(std::string_view text) {
   return out;
 }
 
+namespace {
+
+// Removes a trailing "/web", "/web/" or "/web/index.html" (any case) from the path of `url`. The host is never touched.
+void strip_web_client(std::string& url, size_t host_start) {
+  static const char* const kTails[] = {"/web/index.html", "/web/", "/web"};
+  const std::string lower = to_lower(url);
+  const auto first_slash = lower.find('/', host_start);
+  if (first_slash == std::string::npos) return;
+  for (const char* tail : kTails) {
+    const std::string t(tail);
+    if (lower.size() - first_slash >= t.size() && lower.compare(lower.size() - t.size(), t.size(), t) == 0) {
+      url.resize(url.size() - t.size());
+      return;
+    }
+  }
+}
+
+}  // namespace
+
 std::optional<std::string> normalize_server_url(std::string_view input) {
   while (!input.empty() && std::isspace(static_cast<unsigned char>(input.front()))) input.remove_prefix(1);
   while (!input.empty() && std::isspace(static_cast<unsigned char>(input.back()))) input.remove_suffix(1);
@@ -203,6 +222,9 @@ std::optional<std::string> normalize_server_url(std::string_view input) {
     url = scheme + url.substr(scheme_end);
   }
   const auto host_start = url.find("://") + 3;
+  // A browser address ends in the web client ("/web/index.html#!/home.html"). The API lives above it.
+  url.resize(url.find('#') == std::string::npos ? url.size() : url.find('#'));
+  strip_web_client(url, host_start);
   while (url.size() > host_start && url.back() == '/') url.pop_back();
   if (host_start >= url.size() || url[host_start] == ':' || url[host_start] == '/') return std::nullopt;
   return url;

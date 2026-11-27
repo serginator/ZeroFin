@@ -64,6 +64,10 @@ HttpResponse CurlHttpClient::send(const HttpRequest& request) {
   long status = 0;
   curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &status);
   response.status = static_cast<int>(status);
+  char* effective = nullptr;
+  if (curl_easy_getinfo(curl.get(), CURLINFO_EFFECTIVE_URL, &effective) == CURLE_OK && effective) {
+    response.effective_url = effective;
+  }
   return response;
 }
 

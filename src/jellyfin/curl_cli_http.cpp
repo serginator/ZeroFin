@@ -66,7 +66,7 @@ HttpResponse CurlCliHttpClient::send(const HttpRequest& request) {
   std::string cmd = "/usr/bin/curl -sS -L --max-redirs 5 -m " + std::to_string(request.timeout_ms / 1000 + 1) +
                     " -K '" + config_file.path() + "'";
   if (!request.body.empty()) cmd += " --data-binary '@" + body_file.path() + "'";
-  cmd += " -w '\n%{http_code}' 2>&1";
+  cmd += " -w '\n%{http_code} %{url_effective}' 2>&1";
 
   std::string out;
   if (FILE* p = popen(cmd.c_str(), "r")) {
@@ -76,6 +76,7 @@ HttpResponse CurlCliHttpClient::send(const HttpRequest& request) {
     pclose(p);
   }
 
+  // The last line is "<status> <final url>". The body and any error text come before it.
   const auto nl = out.rfind('\n');
   const int status = nl == std::string::npos ? 0 : std::atoi(out.c_str() + nl + 1);
   if (status == 0) {
@@ -83,6 +84,8 @@ HttpResponse CurlCliHttpClient::send(const HttpRequest& request) {
   } else {
     res.status = status;
     res.body = out.substr(0, nl);
+    const auto space = out.find(' ', nl + 1);
+    if (space != std::string::npos) res.effective_url = out.substr(space + 1);
   }
   return res;
 }

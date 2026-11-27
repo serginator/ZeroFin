@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -23,7 +25,62 @@ std::string str(const json& j, const char* key) {
 
 Error io_error(const std::string& what) { return Error{ErrorKind::Invalid, what, 0}; }
 
+std::string canonical_address(std::string url) {
+  while (!url.empty() && url.back() == '/') url.pop_back();
+  for (char& c : url) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  return url;
+}
+
 }  // namespace
+
+bool same_server_address(const std::string& a, const std::string& b) {
+  const std::string ca = canonical_address(a);
+  return !ca.empty() && ca == canonical_address(b);
+}
+
+void stash_active_server(AppConfig& c) {
+  if (c.server_url.empty()) return;
+  remove_saved_server(c, c.server_url);
+  c.servers.insert(c.servers.begin(), SavedServer{c.server_url, c.server_name, c.token, c.user_id, c.user_name});
+  c.server_url.clear();
+  c.server_name.clear();
+  c.token.clear();
+  c.user_id.clear();
+  c.user_name.clear();
+}
+
+bool activate_saved_server(AppConfig& c, const std::string& url) {
+  const auto it = std::find_if(c.servers.begin(), c.servers.end(),
+                               [&](const SavedServer& s) { return same_server_address(s.url, url); });
+  if (it == c.servers.end()) return false;
+  const SavedServer chosen = *it;
+  c.servers.erase(it);
+  stash_active_server(c);
+  c.server_url = chosen.url;
+  c.server_name = chosen.name;
+  c.token = chosen.token;
+  c.user_id = chosen.user_id;
+  c.user_name = chosen.user_name;
+  return true;
+}
+
+void select_server(AppConfig& c, const std::string& url, const std::string& name) {
+  if (!same_server_address(c.server_url, url)) {
+    if (!activate_saved_server(c, url)) {
+      stash_active_server(c);
+      c.server_url = url;
+    }
+  }
+  if (!name.empty()) c.server_name = name;
+}
+
+bool remove_saved_server(AppConfig& c, const std::string& url) {
+  const auto it = std::find_if(c.servers.begin(), c.servers.end(),
+                               [&](const SavedServer& s) { return same_server_address(s.url, url); });
+  if (it == c.servers.end()) return false;
+  c.servers.erase(it);
+  return true;
+}
 
 std::filesystem::path default_config_dir() {
   if (const char* home = std::getenv("ZEROFIN_HOME"); home && *home) return home;
@@ -55,6 +112,14 @@ jf::Result<AppConfig> ConfigStore::load() const {
     c.video_output = (str(j, "video_output") == "lcd") ? "lcd" : "auto";
     c.hdmi_quality = (str(j, "hdmi_quality") == "1080") ? "1080" : "720";
     c.hdmi_sound = (str(j, "hdmi_sound") == "speaker") ? "speaker" : "monitor";
+    if (auto list = j.find("servers"); list != j.end() && list->is_array()) {
+      for (const json& entry : *list) {
+        if (!entry.is_object()) continue;
+        SavedServer s{str(entry, "url"), str(entry, "name"), str(entry, "token"), str(entry, "user_id"),
+                      str(entry, "user_name")};
+        if (!s.url.empty()) c.servers.push_back(std::move(s));
+      }
+    }
     return c;
   } catch (const json::exception& e) {
     return Error{ErrorKind::Parse, e.what(), 0};
@@ -67,6 +132,14 @@ jf::Result<jf::Unit> ConfigStore::save(const AppConfig& c) const {
   if (ec) return io_error("cannot create " + dir_.string() + ": " + ec.message());
   ::chmod(dir_.c_str(), 0700);
 
+  json saved_servers = json::array();
+  for (const SavedServer& s : c.servers) {
+    saved_servers.push_back({{"url", s.url},
+                             {"name", s.name},
+                             {"token", s.token},
+                             {"user_id", s.user_id},
+                             {"user_name", s.user_name}});
+  }
   const json j = {{"version", 1},
                   {"server_url", c.server_url},
                   {"server_name", c.server_name},
@@ -77,7 +150,8 @@ jf::Result<jf::Unit> ConfigStore::save(const AppConfig& c) const {
                   {"play_mode", c.play_mode == "transcode" ? "transcode" : "auto"},
                   {"video_output", c.video_output == "lcd" ? "lcd" : "auto"},
                   {"hdmi_quality", c.hdmi_quality == "1080" ? "1080" : "720"},
-                  {"hdmi_sound", c.hdmi_sound == "speaker" ? "speaker" : "monitor"}};
+                  {"hdmi_sound", c.hdmi_sound == "speaker" ? "speaker" : "monitor"},
+                  {"servers", saved_servers}};
   const std::string text = j.dump(2) + "\n";
 
   const std::filesystem::path tmp = dir_ / "config.json.tmp";

@@ -83,10 +83,17 @@ void open_item(AppContext& ctx, const jf::Item& item) {
 void go_home(AppContext& ctx) { ctx.nav->reset(make_home_screen(ctx)); }
 void go_connect(AppContext& ctx) { ctx.nav->reset(make_connect_screen(ctx)); }
 void go_setup(AppContext& ctx) { ctx.nav->reset(make_setup_screen(ctx)); }
+void go_servers(AppContext& ctx) {
+  if (ctx.config.server_url.empty() && ctx.config.servers.empty()) {
+    go_setup(ctx);
+  } else {
+    ctx.nav->reset(make_server_list_screen(ctx));
+  }
+}
 
 bool handle_auth_error(AppContext& ctx, const jf::Error& error) {
   if (error.kind != jf::ErrorKind::Unauthorized || !ctx.config.logged_in()) return false;
-  ctx.clear_login(false);
+  ctx.clear_login();
   ctx.toast->show("Session ended. Sign in again.", Toast::Kind::Warning, 3500);
   go_connect(ctx);
   return true;

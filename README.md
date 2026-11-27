@@ -124,6 +124,22 @@ The package puts the program in `/usr/share/APPLaunch/bin`, so ZeroFin appears i
 `libmpv2`, `libfreetype6` and `curl`. GitHub Actions builds the unit tests and the `.deb` on every push
 (`.github/workflows/ci.yml`). `release-please` keeps `version.txt` and attaches the `.deb` to each release.
 
+## Publish to the CardputerZero Store
+
+After the release job has attached the `.deb`, one command sends it to the Store:
+
+```sh
+tools/publish-store.sh        # the latest release. Or: tools/publish-store.sh v1.1.0
+```
+
+It downloads the `.deb` from the release and takes the Store listing (`app-builder.json`, screenshots, icon)
+from the same git tag. Then it runs `czdev publish`, which opens a PR in `CardputerZero/packages`. Updates of an
+existing app merge there on their own. It needs `gh`, `git`, `czdev` (log in once with `czdev login`) and `dpkg-deb`
+(macOS: `brew install dpkg`). `czdev` is in [m5stack/CardputerZero-AppBuilder](https://github.com/m5stack/CardputerZero-AppBuilder).
+
+CI does not publish for you. `czdev login` saves a GitHub token with the `public_repo` scope, which can write to
+all your public repositories. That is too much to keep as a repository secret.
+
 ## Developer settings (environment variables)
 
 | Variable | Effect |

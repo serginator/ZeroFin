@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/serginator/ZeroFin/compare/v1.0.0...v1.1.0) (2026-11-27)
+
+
+### Features
+
+* save several servers and switch between them ([#12](https://github.com/serginator/ZeroFin/issues/12)) ([db5c6ae](https://github.com/serginator/ZeroFin/commit/db5c6ae6c626cc023233e65303897b80c91a55f1))
+
+
+### Bug Fixes
+
+* connect to servers that redirect http to https, and to pasted browser addresses ([#10](https://github.com/serginator/ZeroFin/issues/10)) ([5cdd687](https://github.com/serginator/ZeroFin/commit/5cdd6875f2c315b3b0dd9fbda04916120fefa909)), closes [#9](https://github.com/serginator/ZeroFin/issues/9)
+
 ## [1.0.0](https://github.com/serginator/ZeroFin/compare/v0.3.1...v1.0.0) (2026-11-26)
 
 

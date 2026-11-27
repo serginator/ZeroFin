@@ -304,10 +304,7 @@ class SettingsScreen : public Screen {
     item("Server", ctx_.config.server_name, true, nullptr);
     item("User", ctx_.config.user_name, true, nullptr);
     item("Log out", "", false, [this] { confirm_logout(); });
-    item("Switch server", "", false, [this] {
-      ctx_.clear_login(true);
-      go_setup(ctx_);
-    });
+    item("Switch server", "", false, [this] { ctx_.nav->push(make_server_list_screen(ctx_)); });
     header("About");
     item("ZeroFin", ZEROFIN_VERSION_STRING, true, nullptr);
     list_->set_rows(std::move(rows));
@@ -322,7 +319,7 @@ class SettingsScreen : public Screen {
       // Tell the server first so the token stops working, then forget it here.
       auto old_client = ctx_.client;
       ctx_.async->run(Async::make_alive(), [old_client] { return old_client->logout(); }, [](jf::Result<jf::Unit>) {});
-      ctx_.clear_login(false);
+      ctx_.clear_login();
       go_connect(ctx_);
     };
     ctx_.nav->push(make_message_screen(ctx_, std::move(spec)));

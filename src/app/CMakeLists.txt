@@ -7,6 +7,7 @@ set(ZEROFIN_APP_SOURCES
   screens/home_lists.cpp
   screens/open_item.cpp
   screens/player_screen.cpp
+  screens/server_list.cpp
   screens/setup_connect.cpp
   ui/assets.cpp
   ui/async.cpp

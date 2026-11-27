@@ -50,6 +50,11 @@ std::unique_ptr<Screen> make_search_screen(AppContext& ctx);
 std::unique_ptr<Screen> make_detail_screen(AppContext& ctx, jf::Item item);
 std::unique_ptr<Screen> make_settings_screen(AppContext& ctx);
 std::unique_ptr<Screen> make_message_screen(AppContext& ctx, MessageSpec spec);
+// The servers saved on this device. Open one, remove one, or add one.
+std::unique_ptr<Screen> make_server_list_screen(AppContext& ctx);
+
+// An address without its scheme ("https://h:8096" gives "h:8096"), short enough for a list row.
+std::string short_address(const std::string& address);
 
 // Opens the right screen for an item: details for a movie or episode, a list of seasons for
 // a series, and so on.
@@ -58,6 +63,8 @@ void open_item(AppContext& ctx, const jf::Item& item);
 void go_home(AppContext& ctx);     // clears the stack and shows the home screen
 void go_connect(AppContext& ctx);  // clears the stack and shows the Quick Connect screen
 void go_setup(AppContext& ctx);    // clears the stack and shows the server screen
+// Clears the stack and shows the saved servers. Shows the server screen when none is saved.
+void go_servers(AppContext& ctx);
 
 // If `error` means the login ended, forgets it and moves to the Quick Connect screen.
 // Returns true in that case.

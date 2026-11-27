@@ -7,11 +7,6 @@
 namespace zerofin::app {
 namespace {
 
-std::string short_address(const std::string& address) {
-  const auto scheme = address.find("://");
-  return scheme == std::string::npos ? address : address.substr(scheme + 3);
-}
-
 // Stores the login, greets the user and opens the home screen.
 void finish_login(AppContext& ctx, const jf::AuthResult& auth) {
   ctx.set_login(auth);
@@ -97,7 +92,16 @@ class SetupScreen : public Screen {
 
   void choose(const jf::DiscoveredServer& server) {
     ctx_.use_server(server.address, server.name);
-    ctx_.nav->push(make_connect_screen(ctx_));
+    sign_in_or_open();
+  }
+
+  // A server that is already saved with a login opens at once. Any other needs Quick Connect.
+  void sign_in_or_open() {
+    if (ctx_.config.logged_in()) {
+      go_home(ctx_);
+    } else {
+      ctx_.nav->push(make_connect_screen(ctx_));
+    }
   }
 
   void ask_address() {
@@ -143,7 +147,7 @@ class SetupScreen : public Screen {
               checking_ = false;
               set_status("");
               ctx_.use_server((*urls)[i], r.value().name);
-              ctx_.nav->push(make_connect_screen(ctx_));
+              sign_in_or_open();
               return;
             }
             if (!first_error) first_error = r.error();
@@ -207,7 +211,7 @@ class ConnectScreen : public Screen {
       return true;
     }
     if (e.key == ui::Key::Esc && !e.repeat && ctx_.nav->depth() <= 1) {
-      go_setup(ctx_);  // keeps the saved server until another one is chosen
+      go_servers(ctx_);  // keeps the saved servers until another one is chosen
       return true;
     }
     return false;

@@ -40,12 +40,34 @@ bool AppContext::save_config() {
 }
 
 void AppContext::use_server(const std::string& url, const std::string& name) {
-  config.server_url = url;
-  config.server_name = name;
-  config.token.clear();
-  config.user_id.clear();
-  config.user_name.clear();
-  client = client_factory ? client_factory(url) : nullptr;
+  storage::select_server(config, url, name);
+  client = client_factory ? client_factory(config.server_url) : nullptr;
+  if (client && config.logged_in()) client->set_session({config.token, config.user_id});
+  save_config();
+}
+
+void AppContext::forget_server(const std::string& url) {
+  // Tell the server first so the token stops working, then forget it here. A failure is ignored.
+  std::shared_ptr<jf::Client> revoke;
+  const bool active = storage::same_server_address(config.server_url, url);
+  if (active) {
+    if (config.logged_in()) revoke = client;
+    config.server_url.clear();
+    config.server_name.clear();
+    config.token.clear();
+    config.user_id.clear();
+    config.user_name.clear();
+    client.reset();
+  } else {
+    for (const auto& saved : config.servers) {
+      if (storage::same_server_address(saved.url, url) && saved.logged_in() && client_factory) {
+        revoke = client_factory(saved.url);
+        if (revoke) revoke->set_session({saved.token, saved.user_id});
+      }
+    }
+    storage::remove_saved_server(config, url);
+  }
+  if (revoke && async) async->run(Async::make_alive(), [revoke] { return revoke->logout(); }, [](jf::Result<jf::Unit>) {});
   save_config();
 }
 
@@ -56,17 +78,11 @@ void AppContext::set_login(const jf::AuthResult& auth) {
   save_config();
 }
 
-void AppContext::clear_login(bool forget_server) {
+void AppContext::clear_login() {
   config.token.clear();
   config.user_id.clear();
   config.user_name.clear();
-  if (forget_server) {
-    config.server_url.clear();
-    config.server_name.clear();
-    client.reset();
-  } else if (client_factory) {
-    client = client_factory(config.server_url);
-  }
+  if (client_factory) client = client_factory(config.server_url);
   save_config();
 }
 

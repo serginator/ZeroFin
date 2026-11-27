@@ -64,12 +64,16 @@ struct AppContext {
 
   // Writes the config file. Shows a toast on failure.
   bool save_config();
-  // Points the app at a server. Drops any session.
+  // Points the app at a server. The login stays when the server is the active one or a saved one. A new
+  // address starts signed out. The server that was active is kept in the saved list.
   void use_server(const std::string& url, const std::string& name);
+  // Removes a server and its login from this device: the active one or a saved one. The token is revoked on
+  // the server first, best effort. Removing the active server leaves the app with no active server.
+  void forget_server(const std::string& url);
   // Stores a login in the config and in the client.
   void set_login(const jf::AuthResult& auth);
-  // Forgets the login. Keeps the server address unless `forget_server` is true.
-  void clear_login(bool forget_server);
+  // Forgets the login of the active server. Keeps its address.
+  void clear_login();
 };
 
 }  // namespace zerofin::app

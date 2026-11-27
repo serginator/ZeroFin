@@ -167,6 +167,8 @@ int run_app() {
     nav.reset(make_home_screen(ctx));
   } else if (!ctx.config.server_url.empty()) {
     nav.reset(make_connect_screen(ctx));
+  } else if (!ctx.config.servers.empty()) {
+    nav.reset(make_server_list_screen(ctx));  // the active server was removed, others are saved
   } else {
     nav.reset(make_setup_screen(ctx));
   }
